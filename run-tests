@@ -1,0 +1,197 @@
+#!/usr/bin/env python2
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+
+import argparse
+import os
+import glob
+import subprocess
+import sys
+
+import nose
+import testing.harness.run_tests as run_tests
+
+DEBUG = bool(os.getenv('DEBUG'))
+ROOT = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(os.path.join(ROOT, 'testing', 'harness'))
+
+DOCKER_COMPOSE = ['docker-compose',
+                  '-f', os.path.join(ROOT, 'testing', 'docker-compose.yml')]
+SERVICES = ['autoland.treestatus', 'autoland.db',
+            'autoland.hg-land', 'autoland.hg-test',
+            'autoland.transplant-api', 'autoland.transplant-daemon']
+
+
+def docker_compose(args, verbose=False):
+    """Helper wrapper for docker-compose"""
+    log_level = 'info' if DEBUG else 'error'
+    cmd = ['docker-compose',
+           '-f', os.path.join(ROOT, 'testing', 'docker-compose.yml'),
+           '--no-ansi', '--log-level', log_level] + args
+    if DEBUG:
+        print(cmd)
+
+    if verbose:
+        subprocess.check_call(cmd)
+
+    else:
+        # docker-compose is extremely verbose, blackhole all output unless
+        # there was an error.
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        out, err = process.communicate()
+        if process.returncode:
+            print(err.rstrip())
+            print(out.rstrip())
+
+
+def is_running():
+    """Check if the docker containters are running."""
+    running_containers = subprocess.check_output(
+        ['docker', 'ps', '--format', '{{.Names}}']
+    ).splitlines()
+    # Really only need to check if the main daemon container is active.
+    return 'autoland_test.daemon' in running_containers
+
+
+def docker_images():
+    """Returns a list of docker images."""
+    return subprocess.check_output(
+        ['docker', 'images', '--format', '{{.Repository}}']
+    ).splitlines()
+
+
+def start_docker_env(verbose=False):
+    if not is_running():
+        docker_compose(['up', '--build', '--detach'], verbose)
+
+
+def stop_docker_env(verbose=False):
+    docker_compose(['down', '--timeout', '1'], verbose)
+
+
+def main():
+    try:
+        parser = argparse.ArgumentParser(
+            description='run autoland-transplant tests')
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--start', action='store_true',
+                           help='start docker containers, don\'t run tests')
+        group.add_argument('--stop', action='store_true',
+                           help='stop docker containers')
+        group.add_argument('--restart', action='store_true',
+                           help='restart docker containers')
+        group.add_argument('--pull', action='store_true',
+                           help='pull down new images')
+        parser.add_argument('--verbose', '-v', action='store_true',
+                            help='verbose output')
+        parser.add_argument('--autoland-port', default=8101,
+                            help='local port to bind autoland to')
+        parser.add_argument('--hgweb-port', default=8102,
+                            help='local port to bind hgweb to')
+        parser.add_argument('tests', nargs='*',
+                            help='tests to execute')
+        args = parser.parse_args()
+
+        # Setup environment
+        os.environ['HOST_AUTOLAND'] = str(args.autoland_port)
+        os.environ['HOST_HGWEB'] = str(args.hgweb_port)
+        os.environ['AUTOLAND_URL'] = 'http://localhost:%s' % args.autoland_port
+        os.environ['HGWEB_URL'] = 'http://localhost:%s' % args.hgweb_port
+
+        if args.start:
+            if is_running():
+                raise Exception('Test Environment already running')
+            print('Starting Test Environment')
+            start_docker_env(verbose=args.verbose)
+
+        elif args.stop:
+            print('Stopping Test Environment')
+            stop_docker_env(verbose=args.verbose)
+
+        elif args.restart:
+            print('Restarting Test Environment')
+            stop_docker_env(verbose=args.verbose)
+            start_docker_env(verbose=args.verbose)
+
+        elif args.pull:
+            stop_docker_env(verbose=args.verbose)
+            if 'mozilla/autolandtreestatus' in docker_images():
+                print('removing image: mozilla/autolandtreestatus')
+                subprocess.check_call(['docker', 'rmi',
+                                       'mozilla/autolandtreestatus'])
+            docker_compose(['pull'], verbose=True)
+
+        else:
+            # Gather all tests.
+            tests_path = os.path.join(ROOT, 'testing', 'tests')
+            all_tests = sorted(glob.glob(os.path.join(tests_path, '*.t'))
+                               + glob.glob(os.path.join(tests_path, '*.py')))
+
+            # Find matching tests.
+            if not args.tests:
+                tests = all_tests
+            else:
+                tests = []
+                for arg_test in args.tests:
+                    arg_test = os.path.basename(arg_test)
+                    tests.extend([f for f in all_tests
+                                  if arg_test in os.path.basename(f)])
+                if not tests:
+                    sys.stderr.write('Failed to find any matching tests\n')
+                    sys.exit(1)
+
+            # Categorise tests.
+            unit_tests = []
+            docker_tests = []
+            for test_file in tests:
+                if test_file.endswith('.py'):
+                    unit_tests.append(test_file)
+                else:
+                    docker_tests.append(test_file)
+
+            os.chdir(ROOT)
+
+            # Create venv if missing
+            if not os.path.exists(os.path.join(ROOT, 'venv')):
+                subprocess.check_call(['./create-virtualenv'])
+
+            if 'testing_autoland.transplant-daemon' not in docker_images():
+                # Looks like we don't have any images built; start the env
+                # here to avoid the first test timing out while it's built.
+                print('Setting up Test Environment')
+                start_docker_env(verbose=True)
+
+            # Run tests.
+            if unit_tests:
+                print('Running %s unit test%s...'
+                      % (len(unit_tests),
+                         '' if len(unit_tests) == 1 else 's'))
+                nose_args = unit_tests
+                if args.verbose:
+                    nose_args.append('--verbose')
+                nose.run(argv=nose_args)
+
+            if docker_tests:
+                print('Running %s integration test%s...'
+                      % (len(docker_tests),
+                         '' if len(docker_tests) == 1 else 's'))
+                try:
+                    runner = run_tests.TestRunner()
+                    cmd = ['--with-hg=%s/venv/bin/hg' % ROOT]
+                    if args.verbose:
+                        cmd.extend(['--verbose', '--time'])
+                    result = runner.run(cmd + docker_tests)
+                    sys.exit(result)
+                finally:
+                    stop_docker_env(args.verbose)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        if DEBUG:
+            raise
+        print(e)
+        sys.exit(1)
+
+
+main()

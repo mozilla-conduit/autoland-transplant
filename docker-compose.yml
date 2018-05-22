@@ -1,0 +1,85 @@
+version: '2'
+
+services:
+
+    autoland.treestatus:
+        image: mozilla/autolandtreestatus
+        restart: always
+
+    autoland.hg-init:
+        image: mozilla/autolandhg
+        command: init
+        volumes:
+            - autoland-dev-hg:/repos
+
+    autoland.hg:
+        image: mozilla/autolandhg
+        restart: always
+        depends_on:
+            - autoland.hg-init
+        ports:
+            - "${HOST_HGWEB}:${PORT}"
+        volumes:
+            - autoland-dev-hg:/repos
+
+    autoland.db:
+        image: postgres:10.1-alpine
+        restart: always
+        environment:
+            POSTGRES_DB: autoland
+            POSTGRES_USER: autoland
+            POSTGRES_PASSWORD: autoland
+        volumes:
+            - autoland-dev-db:/var/lib/postgresql
+
+    autoland.transplant-init:
+        build: .
+        command: init
+        environment:
+            SRC_PATH: /home/autoland/src
+        depends_on:
+            - autoland.db
+        volumes:
+            - autoland-dev-repos:/repos
+            - ./autoland:/home/autoland/src
+        links:
+            - autoland.db:autolanddb
+
+    autoland.transplant-api:
+        build: .
+        restart: always
+        command: api
+        environment:
+            SRC_PATH: /home/autoland/src
+        depends_on:
+            - autoland.db
+            - autoland.transplant-init
+        ports:
+            - "${HOST_AUTOLAND}:${PORT}"
+        links:
+            - autoland.db:autolanddb
+            - autoland.hg:${REPO_HOST}
+        volumes:
+            - ./autoland:/home/autoland/src
+
+    autoland.transplant-daemon:
+        build: .
+        restart: always
+        command: daemon
+        environment:
+            TREESTATUS_URL: "http://treestatus:${PORT}/%s"
+            SRC_PATH: /home/autoland/src
+        depends_on:
+            - autoland.db
+            - autoland.transplant-init
+        links:
+            - autoland.db:autolanddb
+            - autoland.hg:${REPO_HOST}
+            - autoland.treestatus:treestatus
+        volumes:
+            - ./autoland:/home/autoland/src
+
+volumes:
+    autoland-dev-hg:
+    autoland-dev-db:
+    autoland-dev-repos:

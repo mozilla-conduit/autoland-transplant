@@ -1,0 +1,20 @@
+Listen ${PORT}
+<VirtualHost *:${PORT}>
+    ServerAdmin webmaster@localhost
+
+    <Directory ${SRC_PATH}/>
+        WSGIProcessGroup autoland
+        WSGIApplicationGroup %{GLOBAL}
+        Order allow,deny
+        Allow from all
+        Require all granted
+    </Directory>
+
+    WSGIPassAuthorization On
+    WSGIDaemonProcess autoland user=autoland group=autoland python-path="/home/autoland/venv/lib/python2.7/site-packages"
+    WSGIScriptAlias / ${SRC_PATH}/autoland.wsgi
+
+    LogLevel warn
+    ErrorLog logs/error_autoland.log
+    CustomLog logs/access_autoland.log combined
+</VirtualHost>

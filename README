@@ -1,0 +1,25 @@
+Dockerised `autoland transplant` for development.
+
+
+OVERVIEW
+
+Autoland is a tool that automatically lands patches from one Mercurial tree
+to another. It is used at Mozilla to land requests from MozReview
+(Review Board) and Lando (Phabricator).
+
+
+QUICK START
+
+Run `./create-virtualenv` to create the venv required for testing (and useful
+for IDE integration).  Requires PostgreSQL 9.5 client libraries.
+
+Run `docker-compose up --build --deatch` to start the environment.
+
+Use http://localhost:8100/ to access autoland-transplant and
+http://localhost:8101/ to access the Mercurial repository.
+
+Edit files in `autoland/` and run `docker-compose up --build --deatch` again
+to deploy your changes into the development environment.
+
+Run tests with `./run-tests`.
+

@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+if $( which -s brew ) && [[ "$( uname )" == "Darwin" ]]; then
+    # homebrew's postgresql@9.5 formula shouldn't be linked so it won't be on
+    # the path
+    MAC_BREW=1
+    if [[ -e '/usr/local/opt/postgresql@9.5/bin/pg_config' ]]; then
+        export PATH="/usr/local/opt/postgresql@9.5/bin:$PATH"
+    fi
+fi
+
+# we need pg_config on the path
+if ! $( which -s pg_config ); then
+    echo "pg_config not found, install PostgreSQL client libraries"
+    [[ -n ${MAC_BREW} ]] && echo "Install using: brew install postgresql@9.5"
+    exit 1
+fi
+
+# check postgres version matches production (v9.5)
+if [[ -z "$( pg_config --version | grep '^PostgreSQL 9\.5' )" ]]; then
+    echo "PostgreSQL version found isn't 9.5: $( pg_config --version )"
+    [[ -n ${MAC_BREW} ]] && echo "Install using: brew install postgresql@9.5"
+    exit 1
+fi
+
+echo "Found $( pg_config --version )"
+
+cd $( dirname $0 )
+virtualenv venv --python=python2.7
+./venv/bin/pip install -r requirements.txt

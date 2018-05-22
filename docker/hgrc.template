@@ -1,0 +1,13 @@
+[ui]
+username = Otto Land <autoland@example.com>
+merge = internal:merge
+
+[extensions]
+purge =
+rebase =
+rewritecommitdescriptions = ${SRC_PATH}/hgext/rewritecommitdescriptions.py
+strip =
+
+# paths must be the last section
+[paths]
+${REPO_NAME} = ${REPO_URL}

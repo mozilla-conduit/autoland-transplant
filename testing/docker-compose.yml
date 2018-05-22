@@ -1,0 +1,68 @@
+version: '2'
+
+services:
+
+    autoland.treestatus:
+        image: mozilla/autolandtreestatus:latest
+        container_name: autoland_test.treestatus
+        restart: always
+        environment:
+            IS_TESTING: 1
+            PORT: 8000
+
+    autoland.hg:
+        image: globau/transplant-test-hgweb
+        container_name: autoland_test.hg
+        restart: always
+        environment:
+            IS_TESTING: 1
+        ports:
+            - "${HOST_HGWEB}:80"
+
+    autoland.db:
+        image: postgres:10.1-alpine
+        container_name: autoland_test.db
+        restart: always
+        environment:
+            IS_TESTING: 1
+            POSTGRES_DB: autoland
+            POSTGRES_USER: autoland
+            POSTGRES_PASSWORD: autoland
+
+    autoland.transplant-api:
+        build: ..
+        container_name: autoland_test.api
+        restart: always
+        command: api
+        environment:
+            IS_TESTING: 1
+            SRC_PATH: /home/autoland/src
+        depends_on:
+            - autoland.db
+        ports:
+            - "${HOST_AUTOLAND}:8000"
+        links:
+            - autoland.db:autolanddb
+            - autoland.hg:hgweb
+        volumes:
+            - ../autoland:/home/autoland/src
+
+    autoland.transplant-daemon:
+        build: ..
+        container_name: autoland_test.daemon
+        restart: always
+        command: daemon
+        environment:
+            IS_TESTING: 1
+            TREESTATUS_URL: "http://treestatus:8000/%s"
+            SRC_PATH: /home/autoland/src
+            REPO_NAME: test-repo
+            REPO_URL: "http://hgweb/test-repo"
+        depends_on:
+            - autoland.db
+        links:
+            - autoland.db:autolanddb
+            - autoland.hg:hgweb
+            - autoland.treestatus:treestatus
+        volumes:
+            - ../autoland:/home/autoland/src
