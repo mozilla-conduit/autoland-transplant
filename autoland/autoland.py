@@ -367,12 +367,12 @@ def main():
                         help='Postgresql DSN connection string')
     args = parser.parse_args()
 
-    logging.basicConfig(format='%(asctime)s,%(msecs)d %(name)s '
-                               '%(levelname)s %(message)s',
-                        datefmt='%H:%M:%S',
-                        level=logging.DEBUG)
+    # log to stdout
     stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(logging.Formatter('%(asctime)s,%(msecs)d '
+                                                  '%(levelname)s %(message)s'))
     logger.addHandler(stdout_handler)
+    logger.setLevel(logging.ERROR)
 
     # boto's debug logging is rather verbose.
     logging.getLogger('botocore').setLevel(logging.INFO)
