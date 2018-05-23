@@ -372,7 +372,7 @@ def main():
     stdout_handler.setFormatter(logging.Formatter('%(asctime)s,%(msecs)d '
                                                   '%(levelname)s %(message)s'))
     logger.addHandler(stdout_handler)
-    logger.setLevel(logging.ERROR)
+    logger.setLevel(logging.DEBUG)
 
     # boto's debug logging is rather verbose.
     logging.getLogger('botocore').setLevel(logging.INFO)
