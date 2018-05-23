@@ -1,0 +1,42 @@
+#!/usr/bin/env python2
+
+import ConfigParser
+import StringIO
+import os
+import subprocess
+import sys
+
+ROOT = os.path.abspath(os.path.dirname(__file__))
+if 'VIRTUAL_ENV' not in os.environ:
+    activate = os.path.join(ROOT, 'venv', 'bin', 'activate_this.py')
+    execfile(activate, dict(__file__=activate))
+    sys.executable = os.path.join(ROOT, 'venv', 'bin', 'python')
+os.chdir(ROOT)
+
+# Load .env file.
+env = ConfigParser.ConfigParser()
+with open('.env', 'r') as f:
+    env.readfp(StringIO.StringIO('[config]\n%s' % f.read()))
+
+output_path = 'dev-repo'
+if os.path.exists(output_path):
+    print('%s already exists' % output_path)
+    sys.exit(1)
+
+# Clone
+print('cloning into %s' % output_path)
+os.environ['HGRCPATH'] = ''
+subprocess.call([
+    'hg',
+    'clone', 'http://localhost:%s' % env.get('config', 'HOST_HGWEB'),
+    output_path
+])
+
+# Set pushurl so you can't push directly to the repo (must use autoland).
+hgrc_file = os.path.join(output_path, '.hg', 'hgrc')
+hgrc = ConfigParser.ConfigParser()
+hgrc.read(hgrc_file)
+hgrc.set('paths', 'default:pushurl', 'file:///dev/null')
+hgrc.set('ui', 'username', 'Autoland Dev <autoland@example.com>')
+with open(hgrc_file, 'w') as f:
+    hgrc.write(f)

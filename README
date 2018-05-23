@@ -10,10 +10,14 @@ to another. It is used at Mozilla to land requests from MozReview
 
 QUICK START
 
-Run `./create-virtualenv` to create the venv required for testing (and useful
+`./create-virtualenv` to create the venv required for testing (and useful
 for IDE integration).  Requires PostgreSQL 9.5 client libraries.
 
-Run `docker-compose up --build --detach` to start the environment.
+`docker-compose up --build --detach` to start the environment.
+
+`clone-repo` to clone the Mercurial repository from your development
+environment locally (into the `dev-repo` directory).  Commit changes to this
+repository and use `../post-to-autoland` to submit commits.
 
 Use http://localhost:8100/ to access autoland-transplant and
 http://localhost:8101/ to access the Mercurial repository.
