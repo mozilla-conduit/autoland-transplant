@@ -3,12 +3,14 @@
 # GNU General Public License version 2 or any later version.
 
 import argparse
-import os
+import datetime
 import glob
+import os
 import subprocess
 import sys
 
 import nose
+
 import testing.harness.run_tests as run_tests
 
 DEBUG = bool(os.getenv('DEBUG'))
@@ -71,27 +73,31 @@ def stop_docker_env(verbose=False):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description='run autoland-transplant tests')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--start', action='store_true',
+                       help='start docker containers, don\'t run tests')
+    group.add_argument('--stop', action='store_true',
+                       help='stop docker containers')
+    group.add_argument('--restart', action='store_true',
+                       help='restart docker containers')
+    group.add_argument('--pull', action='store_true',
+                       help='pull down new images')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='verbose output')
+    parser.add_argument('--no-timing', action='store_true',
+                        help="don't output elapsed time")
+    parser.add_argument('--autoland-port', default=8101,
+                        help='local port to bind autoland to')
+    parser.add_argument('--hgweb-port', default=8102,
+                        help='local port to bind hgweb to')
+    parser.add_argument('tests', nargs='*',
+                        help='tests to execute')
+    args = parser.parse_args()
+
+    start = datetime.datetime.now()
     try:
-        parser = argparse.ArgumentParser(
-            description='run autoland-transplant tests')
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument('--start', action='store_true',
-                           help='start docker containers, don\'t run tests')
-        group.add_argument('--stop', action='store_true',
-                           help='stop docker containers')
-        group.add_argument('--restart', action='store_true',
-                           help='restart docker containers')
-        group.add_argument('--pull', action='store_true',
-                           help='pull down new images')
-        parser.add_argument('--verbose', '-v', action='store_true',
-                            help='verbose output')
-        parser.add_argument('--autoland-port', default=8101,
-                            help='local port to bind autoland to')
-        parser.add_argument('--hgweb-port', default=8102,
-                            help='local port to bind hgweb to')
-        parser.add_argument('tests', nargs='*',
-                            help='tests to execute')
-        args = parser.parse_args()
 
         # Setup environment
         os.environ['HOST_AUTOLAND'] = str(args.autoland_port)
@@ -192,6 +198,18 @@ def main():
             raise
         print(e)
         sys.exit(1)
+    finally:
+        seconds = (datetime.datetime.now() - start).total_seconds()
+        if not args.no_timing and seconds > 5:
+            hours, seconds = divmod(seconds, 3600)
+            minutes, seconds = divmod(seconds, 60)
+            if hours > 0:
+                duration = '%dh%dm%ds' % (hours, minutes, seconds)
+            elif minutes > 0:
+                duration = '%dm%ds' % (minutes, seconds)
+            else:
+                duration = '%ds' % seconds
+            print('Elapsed: %s' % duration)
 
 
 main()
