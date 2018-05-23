@@ -18,4 +18,4 @@ fi
 
 . /home/autoland/venv/bin/activate
 cd ${SRC_PATH}
-exec python autoland.py > /home/autoland/autoland.log
+exec python autoland.py

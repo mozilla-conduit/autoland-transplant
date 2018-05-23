@@ -148,8 +148,6 @@ class Transplant(object):
             for line in out.rstrip().splitlines():
                 logger.info('%s > %s' % (self.source_rev, line))
         if ret:
-            if out:
-                logging.error(out.rstrip())
             raise hglib.error.CommandError(args, ret, out, '')
         return out
 
@@ -367,15 +365,15 @@ class PatchTransplant(Transplant):
 
                 # Apply the patch, with file rename detection (similarity).
                 # Using 95 as the similarity to match automv's default.
-                logger.info(self.run_hg([
-                    'import', '-s', '95', '--no-commit', diff_temp.name]))
+                self.run_hg([
+                    'import', '-s', '95', '--no-commit', diff_temp.name])
 
                 # Commit using the extracted date, user, and commit desc.
-                logger.info(self.run_hg([
+                self.run_hg([
                     'commit',
                     '--date', patch.header('Date'),
                     '--user', patch.header('User'),
-                    '--logfile', desc_temp.name]))
+                    '--logfile', desc_temp.name])
 
         else:
             with tempfile.NamedTemporaryFile() as temp_file:
@@ -384,7 +382,7 @@ class PatchTransplant(Transplant):
 
                 # Apply the patch, with file rename detection (similarity).
                 # Using 95 as the similarity to match automv's default.
-                logger.info(self.run_hg(['import', '-s', '95', temp_file.name]))
+                self.run_hg(['import', '-s', '95', temp_file.name])
 
     @staticmethod
     def _download_from_s3(patch_url):
@@ -395,15 +393,15 @@ class PatchTransplant(Transplant):
 
         buckets_config = config.get('patch_url_buckets')
         if bucket not in buckets_config:
-            logging.error('bucket "%s" not configured in patch_url_buckets'
-                          % bucket)
+            logger.error('bucket "%s" not configured in patch_url_buckets'
+                         % bucket)
             raise Exception('invalid patch_url')
         bucket_config = buckets_config[bucket]
 
         if ('aws_access_key_id' not in bucket_config or
                 'aws_secret_access_key' not in bucket_config):
-            logging.error('bucket "%s" is missing aws_access_key_id or '
-                          'aws_secret_access_key' % bucket)
+            logger.error('bucket "%s" is missing aws_access_key_id or '
+                         'aws_secret_access_key' % bucket)
             raise Exception('invalid patch_url')
 
         try:

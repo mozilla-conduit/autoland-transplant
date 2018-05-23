@@ -292,8 +292,8 @@ def handle_pending_mozreview_updates(dbconn):
 
         else:
             if hostname not in config.get('pingback', {}):
-                logging.error('ignoring pingback to %s: unconfigured'
-                              % hostname)
+                logger.error('ignoring pingback to %s: unconfigured'
+                             % hostname)
                 pingback_url = None
 
         # Use the appropriate handler for this pingback.
@@ -307,8 +307,8 @@ def handle_pending_mozreview_updates(dbconn):
                 pingback = lando_pingback
 
             else:
-                logging.warning('ignoring pinback to %s: not supported'
-                                % hostname)
+                logger.warning('ignoring pinback to %s: not supported'
+                               % hostname)
                 pingback_url = None
 
         # Update the requester if required.
@@ -369,8 +369,7 @@ def main():
 
     # log to stdout
     stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setFormatter(logging.Formatter('%(asctime)s,%(msecs)d '
-                                                  '%(levelname)s %(message)s'))
+    stdout_handler.setFormatter(logging.Formatter('%(levelname)s %(message)s'))
     logger.addHandler(stdout_handler)
     logger.setLevel(logging.DEBUG)
 
