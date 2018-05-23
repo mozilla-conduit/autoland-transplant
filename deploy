@@ -1,0 +1,63 @@
+#!/usr/bin/env python2
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import argparse
+import datetime
+import os
+import subprocess
+import sys
+
+DEBUG = bool(os.getenv('DEBUG'))
+ROOT = os.path.abspath(os.path.dirname(__file__))
+
+
+def main():
+    parser = argparse.ArgumentParser(description='deploy autoland-transplant')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--production', '--prod', action='store_true',
+                       help='deploy to production')
+    group.add_argument('--development', '--dev', action='store_true',
+                       help='deploy to development')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='verbose output')
+    args = parser.parse_args()
+
+    start = datetime.datetime.now()
+    try:
+        os.chdir(os.path.join(ROOT, 'ansible'))
+
+        cmd = ['ansible-playbook', 'autoland-ec2-provision.yml']
+        if args.verbose:
+            cmd.extend(['-v'])
+        if args.production:
+            print('Deploying to Production...')
+            cmd.extend(['-i', 'hosts_autoland_prod'])
+        else:
+            print('Deploying to Development...')
+            cmd.extend(['-i', 'hosts_autoland_dev'])
+
+        subprocess.check_call(cmd)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        if DEBUG:
+            raise
+        print(e)
+        sys.exit(1)
+    finally:
+        seconds = (datetime.datetime.now() - start).total_seconds()
+        if seconds > 5:
+            hours, seconds = divmod(seconds, 3600)
+            minutes, seconds = divmod(seconds, 60)
+            if hours > 0:
+                duration = '%dh%dm%ds' % (hours, minutes, seconds)
+            elif minutes > 0:
+                duration = '%dm%ds' % (minutes, seconds)
+            else:
+                duration = '%ds' % seconds
+            print('Elapsed: %s' % duration)
+
+
+main()

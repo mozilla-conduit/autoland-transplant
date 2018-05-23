@@ -1,6 +1,5 @@
 ---
-vct_repo: "https://hg.mozilla.org/hgcustom/version-control-tools"
-rev: "@"
+autoland_repo: "https://github.com/mozilla-conduit/autoland-transplant.git"
 
 
 secrets:

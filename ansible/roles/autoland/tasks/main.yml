@@ -18,22 +18,21 @@
 - name: create virtualenv for autoland
   include: ../../../tasks/virtualenv.yml
            venv=/home/autoland/autoland_venv
-           requirements=../../../../autoland/requirements.txt
+           requirements=../../../../requirements.txt
 
-- name: set up version-control-tools repo
+- name: clone source repo
   become: true
   become_user: autoland
-  hg: repo={{ vct_repo }}
-      dest=/home/autoland/version-control-tools
-      revision={{ rev }}
-      force=yes
-      purge=yes
+  git: repo="{{ autoland_repo }}"
+       dest=/home/autoland/autoland-transplant
 
-# Ansible hg module fails to delete ignored files so we do that here
-- name: delete ignored files from version-control-tools repo
+# Ansible git module fails to delete ignored files so we do that here
+- name: delete ignored files from autoland-transplant repo
   become: true
   become_user: autoland
-  command: hg --config extensions.purge= -R /home/autoland/version-control-tools purge --all
+  command: git clean -f -Xd
+  args:
+    chdir: /home/autoland/autoland-transplant
 
 - name: install autoland site hgrc
   copy: src=../files/autoland_hgrc
@@ -42,20 +41,6 @@
         group=autoland
         mode=0644
 
-- name: install config.json
-  template: src=config.json.j2
-            dest=/home/autoland/version-control-tools/autoland/autoland/config.json
-            owner=autoland
-            group=autoland
-            mode=0600
-
-- name: link config.json
-  file: src=/home/autoland/version-control-tools/autoland/autoland/config.json
-        dest=/home/autoland/config.json
-        owner=autoland
-        group=autoland
-        state=link
-
 - name: set custom selinux rule for virtualenv
   command: semanage fcontext -a -t httpd_sys_script_exec_t "/home/autoland/autoland_venv(/.*)?"
 
@@ -63,10 +48,10 @@
   command: restorecon -Rv /home/autoland/autoland_venv/
 
 - name: set custom selinux rule for autoland
-  command: semanage fcontext -a -t httpd_sys_script_exec_t "/home/autoland/version-control-tools/autoland/autoland(/.*)?"
+  command: semanage fcontext -a -t httpd_sys_script_exec_t "/home/autoland/autoland-transplant/autoland(/.*)?"
 
 - name: apply selinux policy to autoland
-  command: restorecon -Rv /home/autoland/version-control-tools/autoland/autoland/
+  command: restorecon -Rv /home/autoland/autoland-transplant/autoland/
 
 - name: set selinux to allow httpd connentions to rds
   command: setsebool -P httpd_can_network_connect_db 1
@@ -77,6 +62,17 @@
         mode=0664
   notify:
     - reload systemd
+
+- name: stop autoland service
+  service: name=autoland
+           state=stopped
+
+- name: install config.json
+  template: src=config.json.j2
+            dest=/home/autoland/config.json
+            owner=autoland
+            group=autoland
+            mode=0600
 
 - name: enable autoland service
   service: name=autoland
@@ -100,3 +96,6 @@
            state=reloaded
            enabled=yes
 
+- name: remove version-control-tools repo
+  file: path=/home/autoland/version-control-tools
+        state=absent

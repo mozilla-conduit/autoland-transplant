@@ -5,7 +5,8 @@ After=network.target auditd.service sshd.service
 [Service]
 User=autoland
 Group=autoland
-WorkingDirectory=/home/autoland/version-control-tools/autoland/autoland
+WorkingDirectory=/home/autoland/autoland-transplant/autoland
+Environment="CONFIG_FILE=/home/autoland/config.json"
 ExecStart=/home/autoland/autoland_venv/bin/python autoland.py
 
 [Install]
