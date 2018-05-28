@@ -9,10 +9,6 @@ import os
 import subprocess
 import sys
 
-import nose
-
-import testing.harness.run_tests as run_tests
-
 DEBUG = bool(os.getenv('DEBUG'))
 ROOT = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.join(ROOT, 'testing', 'harness'))
@@ -22,6 +18,19 @@ DOCKER_COMPOSE = ['docker-compose',
 SERVICES = ['autoland.treestatus', 'autoland.db',
             'autoland.hg-land', 'autoland.hg-test',
             'autoland.transplant-api', 'autoland.transplant-daemon']
+
+
+def init_venv():
+    # Create venv if missing
+    if not os.path.exists(os.path.join(ROOT, 'venv')):
+        print('Creating virtualenv')
+        subprocess.check_call(['./create-virtualenv'])
+
+    # Activate venv
+    if 'VIRTUAL_ENV' not in os.environ:
+        activate = os.path.join(ROOT, 'venv', 'bin', 'activate_this.py')
+        execfile(activate, dict(__file__=activate))
+        sys.executable = os.path.join(ROOT, 'venv', 'bin', 'python')
 
 
 def docker_compose(args, verbose=False):
@@ -98,6 +107,7 @@ def main():
 
     start = datetime.datetime.now()
     try:
+        init_venv()
 
         # Setup environment
         os.environ['HOST_AUTOLAND'] = str(args.autoland_port)
@@ -158,10 +168,6 @@ def main():
 
             os.chdir(ROOT)
 
-            # Create venv if missing
-            if not os.path.exists(os.path.join(ROOT, 'venv')):
-                subprocess.check_call(['./create-virtualenv'])
-
             if 'testing_autoland.transplant-daemon' not in docker_images():
                 # Looks like we don't have any images built; start the env
                 # here to avoid the first test timing out while it's built.
@@ -170,6 +176,7 @@ def main():
 
             # Run tests.
             if unit_tests:
+                import nose
                 print('Running %s unit test%s...'
                       % (len(unit_tests),
                          '' if len(unit_tests) == 1 else 's'))
@@ -179,6 +186,7 @@ def main():
                 nose.run(argv=nose_args)
 
             if docker_tests:
+                import testing.harness.run_tests as run_tests
                 print('Running %s integration test%s...'
                       % (len(docker_tests),
                          '' if len(docker_tests) == 1 else 's'))

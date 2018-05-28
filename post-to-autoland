@@ -9,14 +9,15 @@ import re
 import subprocess
 import sys
 
-import requests
-from requests.auth import HTTPBasicAuth
-
 ROOT = os.path.abspath(os.path.dirname(__file__))
 if 'VIRTUAL_ENV' not in os.environ:
     activate = os.path.join(ROOT, 'venv', 'bin', 'activate_this.py')
     execfile(activate, dict(__file__=activate))
     sys.executable = os.path.join(ROOT, 'venv', 'bin', 'python')
+
+import requests
+from requests.auth import HTTPBasicAuth
+
 os.environ['HGRCPATH'] = ''
 
 # Load .env file.
