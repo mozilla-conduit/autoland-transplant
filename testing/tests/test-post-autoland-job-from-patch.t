@@ -21,7 +21,7 @@ Posting a job with bad credentials should fail
 
   $ autolandctl post-job test-repo p0 land-repo --username blah --password blah --patch-url http://hgweb/test-repo/raw-rev/$REV
   (401, u'Login required')
-  $ autolandctl post-job test-repo p0 land-repo --user blah --password '' --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p0 land-repo --username blah --password '' --patch-url http://hgweb/test-repo/raw-rev/$REV
   (401, u'Login required')
 
 Post a job from http url should fail
