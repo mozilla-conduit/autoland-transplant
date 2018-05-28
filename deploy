@@ -20,6 +20,8 @@ def main():
                        help='deploy to production')
     group.add_argument('--development', '--dev', action='store_true',
                        help='deploy to development')
+    parser.add_argument('--seed', action='store_true',
+                        help='seed secrets instead of a full deploy')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='verbose output')
     args = parser.parse_args()
@@ -28,16 +30,25 @@ def main():
     try:
         os.chdir(os.path.join(ROOT, 'ansible'))
 
-        cmd = ['ansible-playbook', 'autoland-ec2-provision.yml']
+        cmd = ['ansible-playbook']
         if args.verbose:
-            cmd.extend(['-v'])
+            cmd.append('-v')
+
+        if args.seed:
+            action = 'Seeding Secrets'
+            cmd.append('autoland-seed-secrets.yml')
+        else:
+            action = 'Deploying'
+            cmd.append('autoland-ec2-provision.yml')
+
         if args.production:
-            print('Deploying to Production...')
+            target = 'Production'
             cmd.extend(['-i', 'hosts_autoland_prod'])
         else:
-            print('Deploying to Development...')
+            target = 'Development'
             cmd.extend(['-i', 'hosts_autoland_dev'])
 
+        print('%s to %s...' % (action, target))
         subprocess.check_call(cmd)
     except KeyboardInterrupt:
         pass
