@@ -35,10 +35,9 @@ def init_venv():
 
 def docker_compose(args, verbose=False):
     """Helper wrapper for docker-compose"""
-    log_level = 'info' if DEBUG else 'error'
     cmd = ['docker-compose',
            '-f', os.path.join(ROOT, 'testing', 'docker-compose.yml'),
-           '--no-ansi', '--log-level', log_level] + args
+           '--no-ansi'] + args
     if DEBUG:
         print(cmd)
 
