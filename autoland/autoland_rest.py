@@ -80,7 +80,7 @@ def check_patch_url(patch_url):
         return False
 
     # http is only supported when using loopback and private IPs (for dev/test)
-    if url.scheme in ('http', 'https'):
+    if config.testing() and url.scheme in ('http', 'https'):
         try:
             ip = ipaddress.ip_address(
                 unicode(socket.gethostbyname(url.hostname)))
