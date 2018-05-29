@@ -2,6 +2,6 @@
 
 # This can be overridden on the command line depending on where your
 # secrets repo is located
-# eg. "-e secrets_repo_path='../../secrets/'" 
+# eg. ./deploy --seed --secrets-repo-path '../../secrets' --production
 secrets_repo_path: "../../secrets/"
 

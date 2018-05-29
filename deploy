@@ -22,6 +22,8 @@ def main():
                        help='deploy to development')
     parser.add_argument('--seed', action='store_true',
                         help='seed secrets instead of a full deploy')
+    parser.add_argument('--secrets-repo-path',
+                        help='path to secrets repository')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='verbose output')
     args = parser.parse_args()
@@ -37,6 +39,9 @@ def main():
         if args.seed:
             action = 'Seeding Secrets'
             cmd.append('autoland-seed-secrets.yml')
+            if args.secrets_repo_path:
+                cmd.extend(['-e', 'secrets_repo_path=%s'
+                            % args.secrets_repo_path])
         else:
             action = 'Deploying'
             cmd.append('autoland-ec2-provision.yml')
@@ -49,6 +54,8 @@ def main():
             cmd.extend(['-i', 'hosts_autoland_dev'])
 
         print('%s to %s...' % (action, target))
+        if DEBUG:
+            print(cmd)
         subprocess.check_call(cmd)
     except KeyboardInterrupt:
         pass
