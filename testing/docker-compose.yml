@@ -11,7 +11,7 @@ services:
             PORT: 8000
 
     autoland.hg:
-        image: globau/transplant-test-hgweb
+        image: conduitteam/transplant-test-hgweb
         container_name: autoland_test.hg
         restart: always
         environment:
