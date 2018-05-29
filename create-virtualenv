@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+if [[ -n "$VIRTUAL_ENV" ]]; then
+    echo "virtualenv already active, cannot continue"
+    exit 1
+fi
+
 if [[ -n "$( which brew )" ]] && [[ "$( uname )" == "Darwin" ]]; then
     # homebrew's postgresql@9.5 formula shouldn't be linked so it won't be on
     # the path
