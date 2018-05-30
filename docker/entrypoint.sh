@@ -3,8 +3,6 @@ set -e
 
 export SRC_PATH=${SRC_PATH:-/home/autoland/autoland}
 export PORT=${PORT:-8000}
-export REPO_URL=${REPO_URL:-http://autolandhg:8000/}
-export REPO_NAME=${REPO_NAME:-land-repo}
 export CONFIG_FILE=/home/autoland/config.json
 
 cd ${SRC_PATH}

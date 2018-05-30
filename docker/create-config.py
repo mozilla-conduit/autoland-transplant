@@ -17,8 +17,8 @@ config = {
         'autoland': os.getenv('AUTOLAND_KEY', 'autoland'),
     },
     'repos': {
-        os.getenv('REPO_NAME', 'land-repo'): {
-            'tree': os.getenv('REPO_NAME', 'land-repo'),
+        'land-repo': {
+            'tree': 'land-repo',
         },
         'try': {
             'tree': 'try',

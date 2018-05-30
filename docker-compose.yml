@@ -6,19 +6,11 @@ services:
         image: mozilla/autolandtreestatus
         restart: always
 
-    autoland.hg-init:
-        image: mozilla/autolandhg
-        command: init
-        volumes:
-            - autoland-dev-hg:/repos
-
     autoland.hg:
-        image: mozilla/autolandhg
+        image: conduitteam/transplant-test-hgweb:10
         restart: always
-        depends_on:
-            - autoland.hg-init
         ports:
-            - "${HOST_HGWEB}:${PORT}"
+            - "${HOST_HGWEB}:80"
         volumes:
             - autoland-dev-hg:/repos
 
@@ -38,6 +30,7 @@ services:
         environment:
             SRC_PATH: /home/autoland/src
         depends_on:
+            - autoland.hg
             - autoland.db
         volumes:
             - autoland-dev-repos:/repos
@@ -52,13 +45,14 @@ services:
         environment:
             SRC_PATH: /home/autoland/src
         depends_on:
+            - autoland.hg
             - autoland.db
             - autoland.transplant-init
         ports:
             - "${HOST_AUTOLAND}:${PORT}"
         links:
             - autoland.db:autolanddb
-            - autoland.hg:${REPO_HOST}
+            - autoland.hg:hgweb
         volumes:
             - ./autoland:/home/autoland/src
 
@@ -70,11 +64,12 @@ services:
             TREESTATUS_URL: "http://treestatus:${PORT}/%s"
             SRC_PATH: /home/autoland/src
         depends_on:
+            - autoland.hg
             - autoland.db
             - autoland.transplant-init
         links:
             - autoland.db:autolanddb
-            - autoland.hg:${REPO_HOST}
+            - autoland.hg:hgweb
             - autoland.treestatus:treestatus
         volumes:
             - ./autoland:/home/autoland/src

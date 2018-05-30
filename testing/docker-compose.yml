@@ -11,7 +11,7 @@ services:
             PORT: 8000
 
     autoland.hg:
-        image: conduitteam/transplant-test-hgweb
+        image: conduitteam/transplant-test-hgweb:10
         container_name: autoland_test.hg
         restart: always
         environment:
@@ -38,6 +38,7 @@ services:
             IS_TESTING: 1
             SRC_PATH: /home/autoland/src
         depends_on:
+            - autoland.hg
             - autoland.db
         ports:
             - "${HOST_AUTOLAND}:8000"
@@ -56,9 +57,8 @@ services:
             IS_TESTING: 1
             TREESTATUS_URL: "http://treestatus:8000/%s"
             SRC_PATH: /home/autoland/src
-            REPO_NAME: test-repo
-            REPO_URL: "http://hgweb/test-repo"
         depends_on:
+            - autoland.hg
             - autoland.db
         links:
             - autoland.db:autolanddb

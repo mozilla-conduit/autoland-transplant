@@ -26,8 +26,7 @@ with open(os.path.join(ROOT, '.env'), 'r') as f:
     env.readfp(StringIO.StringIO('[config]\n%s' % f.read()))
 
 if not os.path.exists('.hg'):
-    print('You must run this script from the %s clone' % env.get('config',
-                                                                 'REPO_NAME'))
+    print('You must run this script from the test-repo clone')
     sys.exit(1)
 
 autoland_url = 'http://localhost:%s/autoland' % env.get('config',
@@ -45,12 +44,12 @@ if not commit_log:
 
 # Basic job template.
 job = dict(
-    destination=env.get('config', 'REPO_NAME'),
+    destination='land-repo',
     ldap_username=None,
     patch=None,
     pingback_url='http://localhost/',
     rev=None,
-    tree=env.get('config', 'REPO_NAME'),
+    tree='land-repo',
 )
 
 commit_log_re = re.compile(

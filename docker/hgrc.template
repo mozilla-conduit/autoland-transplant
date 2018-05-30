@@ -10,4 +10,6 @@ strip =
 
 # paths must be the last section
 [paths]
-${REPO_NAME} = ${REPO_URL}
+upstream = http://hgweb/land-repo
+land-repo = http://hgweb/land-repo
+try = http://hgweb/try

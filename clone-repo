@@ -26,9 +26,9 @@ if os.path.exists(output_path):
 # Clone
 print('cloning into %s' % output_path)
 os.environ['HGRCPATH'] = ''
-subprocess.call([
+subprocess.check_call([
     'hg',
-    'clone', 'http://localhost:%s' % env.get('config', 'HOST_HGWEB'),
+    'clone', 'http://localhost:%s/test-repo' % env.get('config', 'HOST_HGWEB'),
     output_path
 ])
 
