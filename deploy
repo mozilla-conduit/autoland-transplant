@@ -42,6 +42,7 @@ def main():
             if args.secrets_repo_path:
                 cmd.extend(['-e', 'secrets_repo_path=%s'
                             % args.secrets_repo_path])
+            cmd.append('--ask-vault-pass')
         else:
             action = 'Deploying'
             cmd.append('autoland-ec2-provision.yml')
