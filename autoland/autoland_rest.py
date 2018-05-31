@@ -336,7 +336,8 @@ def autoland_status(request_id):
 
 @app.route('/')
 def hi_there():
-    result = 'Welcome to Autoland'
+    env = 'Test' if config.testing() else 'Production'
+    result = 'Welcome to Autoland %s\n' % env
 
     headers = [
         ("Content-Type", "text/plain"),
