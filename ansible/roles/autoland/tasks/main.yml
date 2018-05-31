@@ -53,12 +53,23 @@
 - name: apply selinux policy to autoland
   command: restorecon -Rv /home/autoland/autoland-transplant/autoland/
 
+- name: set custom selinux rule for autoland config
+  command: semanage fcontext -a -t httpd_sys_content_t /home/autoland/config.json
+
+- name: apply selinux policy to autoland config
+  command: restorecon -v /home/autoland/config.json
+
 - name: set selinux to allow httpd connentions to rds
   command: setsebool -P httpd_can_network_connect_db 1
+
+- name: check if autoland service exists
+  stat: path=/etc/systemd/system/autoland.service
+  register: service_status
 
 - name: stop autoland service
   service: name=autoland
            state=stopped
+  when: service_status.stat.exists
 
 - name: install autoland service
   copy: dest=/etc/systemd/system/autoland.service
