@@ -13,6 +13,8 @@ def find_config():
     if 'CONFIG_FILE' in os.environ:
         CONFIG_PATH = os.environ['CONFIG_FILE']
     else:
+        CONFIG_PATH = os.path.join(os.environ['HOME'], 'config.json')
+    if not os.path.exists(CONFIG_PATH):
         CONFIG_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    'config.json')
 
