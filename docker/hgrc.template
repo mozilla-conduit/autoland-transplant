@@ -6,10 +6,11 @@ merge = internal:merge
 purge =
 rebase =
 rewritecommitdescriptions = ${SRC_PATH}/hgext/rewritecommitdescriptions.py
+set_landing_system = ${SRC_PATH}/hgext/set_landing_system.py
 strip =
 
-# paths must be the last section
 [paths]
 upstream = http://hgweb/land-repo
+test-repo = http://hgweb/test-repo
 land-repo = http://hgweb/land-repo
 try = http://hgweb/try

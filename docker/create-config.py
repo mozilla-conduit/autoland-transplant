@@ -17,6 +17,9 @@ config = {
         'autoland': os.getenv('AUTOLAND_KEY', 'autoland'),
     },
     'repos': {
+        'test-repo': {
+            'tree': 'test-repo',
+        },
         'land-repo': {
             'tree': 'land-repo',
         },
@@ -26,7 +29,7 @@ config = {
     },
     'pingback': {
         'example.com': {
-            'typo': 'lando',
+            'type': 'lando',
             'api-key': 'secret',
         },
         os.getenv('LANDO_HOST', 'lando.example.com'): {

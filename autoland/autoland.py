@@ -153,6 +153,7 @@ def handle_pending_transplants(dbconn):
                         result = tp.push()
                 landed = True
             except Exception as e:
+                logger.exception(e)
                 result = str(e)
                 landed = False
             finally:

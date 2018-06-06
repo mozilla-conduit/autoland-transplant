@@ -42,10 +42,10 @@ Post a job from private ip
   $ autolandctl post-job test-repo p3 land-repo --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{\n  "request_id": 2\n}')
   $ autolandctl job-status 2 --poll
-  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch_urls": [\n    "http://hgweb/test-repo/raw-rev/3db0055aa281"\n  ], \n  "result": "3db0055aa2814a7a39c4c2f17264b11ef3584333", \n  "rev": "p3", \n  "tree": "test-repo"\n}')
-  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}\n'
-  1:Bug 1 - some stuff; r?cthulhu:public
-  0:initial commit:public
+  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch_urls": [\n    "http://hgweb/test-repo/raw-rev/3db0055aa281"\n  ], \n  "result": "6a1a92b3919045841a41fb370ed7c6a633f82657", \n  "rev": "p3", \n  "tree": "test-repo"\n}')
+  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
+  1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  0:initial commit:public:branch=default
 
 Post a job using an inline patch
 
@@ -63,11 +63,11 @@ Post a job using an inline patch
   $ autolandctl post-job test-repo p4 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
   (200, u'{\n  "request_id": 3\n}')
   $ autolandctl job-status 3 --poll
-  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch": "*", \n  "push_bookmark": "bookmark", \n  "result": "4503a20f1bada8b4708a2d02d807d190bf3d167f", \n  "rev": "p4", \n  "tree": "test-repo"\n}') (glob)
-  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}\n'
-  2:Bug 1 - some more stuff; r?cthulhu:public
-  1:Bug 1 - some stuff; r?cthulhu:public
-  0:initial commit:public
+  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch": "*", \n  "push_bookmark": "bookmark", \n  "result": "91bf2a9abc542b18810989b5eeff70debe462f11", \n  "rev": "p4", \n  "tree": "test-repo"\n}') (glob)
+  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
+  2:Bug 1 - some more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  0:initial commit:public:branch=default
 
 Post a job using an inline patch with 'Diff Start Line'
 
@@ -87,12 +87,12 @@ Post a job using an inline patch with 'Diff Start Line'
   $ autolandctl post-job test-repo p4 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
   (200, u'{\n  "request_id": 4\n}')
   $ autolandctl job-status 4 --poll
-  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch": "*", \n  "push_bookmark": "bookmark", \n  "result": "339930c833a568149ed6850c090b96b6296f6fdb", \n  "rev": "p4", \n  "tree": "test-repo"\n}') (glob)
-  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}\n'
-  3:Bug 1 - even more stuff; r?cthulhu:public
-  2:Bug 1 - some more stuff; r?cthulhu:public
-  1:Bug 1 - some stuff; r?cthulhu:public
-  0:initial commit:public
+  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch": "*", \n  "push_bookmark": "bookmark", \n  "result": "c1c0ffb7147ada279f474bd1ba164e0796ed5f07", \n  "rev": "p4", \n  "tree": "test-repo"\n}') (glob)
+  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
+  3:Bug 1 - even more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  2:Bug 1 - some more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  0:initial commit:public:branch=default
 
 Post a job using a bookmark
 
@@ -110,13 +110,13 @@ Post a job using a bookmark
   $ autolandctl post-job test-repo p5 land-repo --push-bookmark "bookmark" --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{\n  "request_id": 5\n}')
   $ autolandctl job-status 5 --poll
-  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch_urls": [\n    "http://hgweb/test-repo/raw-rev/85e19ca28526"\n  ], \n  "push_bookmark": "bookmark", \n  "result": "85e19ca285265afe2e0188a16a1f7a513e964059", \n  "rev": "p5", \n  "tree": "test-repo"\n}')
-  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}\n'
-  4:Bug 1 - more goodness; r?cthulhu:public
-  3:Bug 1 - even more stuff; r?cthulhu:public
-  2:Bug 1 - some more stuff; r?cthulhu:public
-  1:Bug 1 - some stuff; r?cthulhu:public
-  0:initial commit:public
+  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch_urls": [\n    "http://hgweb/test-repo/raw-rev/85e19ca28526"\n  ], \n  "push_bookmark": "bookmark", \n  "result": "125fb26594d32e024f056ca42da2d01598e662df", \n  "rev": "p5", \n  "tree": "test-repo"\n}')
+  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
+  4:Bug 1 - more goodness; r?cthulhu:public:branch=default:moz-landing-system=lando
+  3:Bug 1 - even more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  2:Bug 1 - some more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  0:initial commit:public:branch=default
 
 Post a job with unicode
 
@@ -134,14 +134,14 @@ Post a job with unicode
   $ autolandctl post-job test-repo p6 land-repo --push-bookmark "bookmark" --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{\n  "request_id": 6\n}')
   $ autolandctl job-status 6 --poll
-  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch_urls": [\n    "http://hgweb/test-repo/raw-rev/d5b17bac3b15"\n  ], \n  "push_bookmark": "bookmark", \n  "result": "d5b17bac3b1582378b55a6dd9929420a175180f8", \n  "rev": "p6", \n  "tree": "test-repo"\n}')
-  $ autolandctl exec --container=hg hg log --encoding=utf-8 /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}\n'
-  5:Bug 1 - \xe3\x81\x93\xe3\x82\x93\xe3\x81\xab\xe3\x81\xa1\xe3\x81\xaf; r?cthulhu:public (esc)
-  4:Bug 1 - more goodness; r?cthulhu:public
-  3:Bug 1 - even more stuff; r?cthulhu:public
-  2:Bug 1 - some more stuff; r?cthulhu:public
-  1:Bug 1 - some stuff; r?cthulhu:public
-  0:initial commit:public
+  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch_urls": [\n    "http://hgweb/test-repo/raw-rev/d5b17bac3b15"\n  ], \n  "push_bookmark": "bookmark", \n  "result": "8ec47f5278c79b0efed3742ecd77df69e57a752a", \n  "rev": "p6", \n  "tree": "test-repo"\n}')
+  $ autolandctl exec --container=hg hg log --encoding=utf-8 /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
+  5:Bug 1 - \xe3\x81\x93\xe3\x82\x93\xe3\x81\xab\xe3\x81\xa1\xe3\x81\xaf; r?cthulhu:public:branch=default:moz-landing-system=lando (esc)
+  4:Bug 1 - more goodness; r?cthulhu:public:branch=default:moz-landing-system=lando
+  3:Bug 1 - even more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  2:Bug 1 - some more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  0:initial commit:public:branch=default
 
 Bad Merge (using the now obsolete inline-patch created earlier)
 
@@ -179,7 +179,7 @@ Ensure unexpected files in the repo path are not landed.
   $ autolandctl post-job test-repo p9 land-repo --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{\n  "request_id": 8\n}')
   $ autolandctl job-status 8 --poll
-  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch_urls": [\n    "http://hgweb/test-repo/raw-rev/6511e0f7ffaf"\n  ], \n  "result": "6511e0f7ffaf736468bcca818f081ec26fbd0acc", \n  "rev": "p9", \n  "tree": "test-repo"\n}')
+  (200, u'{\n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "patch_urls": [\n    "http://hgweb/test-repo/raw-rev/6511e0f7ffaf"\n  ], \n  "result": "2788b8f97bf3a9eaa894eaaee06337f436e08199", \n  "rev": "p9", \n  "tree": "test-repo"\n}')
   $ autolandctl exec --container=hg hg -q -R /repos/land-repo update tip
   $ autolandctl exec --container=hg hg files --cwd /repos/land-repo
   foo

@@ -58,6 +58,7 @@ class Transplant(object):
         self.destination = destination
         self.source_rev = rev
         self.path = config.get_repo(tree)['path']
+        self.landing_system_id = None
 
     def __enter__(self):
         configs = ['ui.interactive=False', 'extensions.purge=']
@@ -65,7 +66,10 @@ class Transplant(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.clean_repo()
+        try:
+            self.clean_repo()
+        except Exception as e:
+            logger.exception(e)
         self.hg_repo.close()
 
     def push_try(self, trysyntax):
@@ -233,9 +237,10 @@ class Transplant(object):
 
 class RepoTransplant(Transplant):
     def __init__(self, tree, destination, rev, commit_descriptions):
-        self.commit_descriptions = commit_descriptions
-
         super(RepoTransplant, self).__init__(tree, destination, rev)
+
+        self.landing_system_id = "mozreview"
+        self.commit_descriptions = commit_descriptions
 
     def apply_changes(self, remote_tip):
         # Pull in changes from the source repo.
@@ -313,10 +318,11 @@ class RepoTransplant(Transplant):
 
 class PatchTransplant(Transplant):
     def __init__(self, tree, destination, rev, patch_urls, patch=None):
+        super(PatchTransplant, self).__init__(tree, destination, rev)
+
+        self.landing_system_id = "lando"
         self.patch_urls = patch_urls
         self.patch = patch
-
-        super(PatchTransplant, self).__init__(tree, destination, rev)
 
     def apply_changes(self, remote_tip):
         dirty_files = self.dirty_files()
@@ -352,37 +358,34 @@ class PatchTransplant(Transplant):
     def _apply_patch_from_io_buff(self, io_buf):
         patch = PatchHelper(io_buf)
 
-        if patch.header('Diff Start Line'):
-            with tempfile.NamedTemporaryFile() as desc_temp, \
-                    tempfile.NamedTemporaryFile() as diff_temp:
-                patch.write_commit_description(desc_temp)
-                desc_temp.flush()
-                patch.write_diff(diff_temp)
-                diff_temp.flush()
+        # Import then commit to ensure correct parsing of the
+        # commit description.
+        desc_temp = tempfile.NamedTemporaryFile()
+        diff_temp = tempfile.NamedTemporaryFile()
+        with desc_temp, diff_temp:
+            patch.write_commit_description(desc_temp)
+            desc_temp.flush()
+            patch.write_diff(diff_temp)
+            diff_temp.flush()
 
-                # Import then commit to ensure correct parsing of the
-                # commit description.
+            # Apply the patch, with file rename detection (similarity).
+            # Using 95 as the similarity to match automv's default.
+            #
+            # XXX Using `hg import` here is less than ideal because it isn't
+            # using a 3-way merge. It would be better to use
+            # `hg import --exact` then `hg rebase`, however we aren't
+            # guaranteed to have the changeset's parent in the local repo.
+            self.run_hg([
+                'import', '-s', '95', '--no-commit', diff_temp.name])
 
-                # Apply the patch, with file rename detection (similarity).
-                # Using 95 as the similarity to match automv's default.
-                self.run_hg([
-                    'import', '-s', '95', '--no-commit', diff_temp.name])
-
-                # Commit using the extracted date, user, and commit desc.
-                self.run_hg([
-                    'commit',
-                    '--date', patch.header('Date'),
-                    '--user', patch.header('User'),
-                    '--logfile', desc_temp.name])
-
-        else:
-            with tempfile.NamedTemporaryFile() as temp_file:
-                patch.write(temp_file)
-                temp_file.flush()
-
-                # Apply the patch, with file rename detection (similarity).
-                # Using 95 as the similarity to match automv's default.
-                self.run_hg(['import', '-s', '95', temp_file.name])
+            # Commit using the extracted date, user, and commit desc.
+            # --landing_system is provided by the set_landing_system hgext.
+            self.run_hg([
+                'commit',
+                '--date', patch.header('Date'),
+                '--user', patch.header('User'),
+                '--landing_system', self.landing_system_id,
+                '--logfile', desc_temp.name])
 
     @staticmethod
     def _download_from_s3(patch_url):
@@ -429,4 +432,4 @@ class PatchTransplant(Transplant):
         # Download from patch_url, returns io.BytesIO.
         r = requests.get(patch_url, stream=True)
         r.raise_for_status()
-        return io.BytesIO(r.content)
+        return io.BytesIO(r.content.lstrip())

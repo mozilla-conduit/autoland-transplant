@@ -53,4 +53,4 @@ Open the tree
   $ autolandctl treestatus open
   treestatus set to: open
   $ autolandctl job-status 2 --poll
-  (200, u'{\n  "destination": "try", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "result": "c5b9e0b78b4ca6418efe8933a407b6fc25500515", \n  "rev": "bdf30e77471a", \n  "tree": "test-repo", \n  "trysyntax": "stuff"\n}') (glob)
+  (200, u'{\n  "destination": "try", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "result": "74c00ccf0884f03e12e29db95e5b8f708044e8f0", \n  "rev": "bdf30e77471a", \n  "tree": "test-repo", \n  "trysyntax": "stuff"\n}')

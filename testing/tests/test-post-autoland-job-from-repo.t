@@ -42,16 +42,16 @@ Post a job
   (200, u'{\n  "request_id": 2\n}')
   $ autolandctl job-status 2 --poll
   (200, u'{\n  "commit_descriptions": {\n    "3db0055aa281": "Bug 1 - some stuff; r=cthulhu"\n  }, \n  "destination": "land-repo", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "result": "2d8e774dca588a8e0578f9b450c734b120a978a1", \n  "rev": "3db0055aa281", \n  "tree": "test-repo"\n}')
-  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}\n'
-  1:Bug 1 - some stuff; r=cthulhu:public
-  0:initial commit:public
+  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
+  1:Bug 1 - some stuff; r=cthulhu:public:branch=default
+  0:initial commit:public:branch=default
 
 Post a job with try syntax
 
   $ autolandctl post-job test-repo $REV try --trysyntax "stuff"
   (200, u'{\n  "request_id": 3\n}')
   $ autolandctl job-status 3 --poll
-  (200, u'{\n  "destination": "try", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "result": "4669f828e86bc07ec7dc95b42913c23fde88e2a1", \n  "rev": "3db0055aa281", \n  "tree": "test-repo", \n  "trysyntax": "stuff"\n}')
+  (200, u'{\n  "destination": "try", \n  "error_msg": "", \n  "landed": true, \n  "ldap_username": "autolanduser@example.com", \n  "result": "2ea2487c0c0d82d5f753d21ebf41442dd8667645", \n  "rev": "3db0055aa281", \n  "tree": "test-repo", \n  "trysyntax": "stuff"\n}')
   $ autolandctl exec --container=hg hg log /repos/try --template '{rev}:{desc|firstline}:{phase}\n'
   2:try: stuff:public
   1:Bug 1 - some stuff; r?cthulhu:public
