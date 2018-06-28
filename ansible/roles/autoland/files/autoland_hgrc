@@ -8,3 +8,4 @@ purge =
 rebase =
 strip =
 rewritecommitdescriptions = /home/autoland/autoland-transplant/autoland/hgext/rewritecommitdescriptions.py
+set_landing_system = /home/autoland/autoland-transplant/autoland/hgext/set_landing_system.py
