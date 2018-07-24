@@ -358,6 +358,11 @@ class PatchTransplant(Transplant):
     def _apply_patch_from_io_buff(self, io_buf):
         patch = PatchHelper(io_buf)
 
+        # In production we require each patch to require a `Diff Start Line` header.
+        # In test this is tricky because mercurial doesn't generate this header.
+        if not config.testing() and not patch.diff_start_line:
+            raise Exception("invalid patch: missing `Diff Start Line` header")
+
         # Import then commit to ensure correct parsing of the
         # commit description.
         desc_temp = tempfile.NamedTemporaryFile()
