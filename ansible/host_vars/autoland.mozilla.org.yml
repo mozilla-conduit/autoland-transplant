@@ -4,6 +4,15 @@ repos:
   buildbot-configs:
     path: "/repos/buildbot-configs"
 
+  ci-admin:
+    path: "/repos/ci-admin"
+
+  ci-configuration:
+    path: "/repos/ci-configuration"
+
+  comm-central:
+    path: "/repos/comm-central"
+
   conduit:
     path: "/repos/conduit"
 
@@ -31,9 +40,3 @@ repos:
 
   fluent-migration:
     path: "/repos/fluent-migration"
-
-  ci-admin:
-    path: "/repos/ci-admin"
-
-  ci-configuration:
-    path: "/repos/ci-configuration"
