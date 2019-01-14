@@ -40,3 +40,6 @@ repos:
 
   fluent-migration:
     path: "/repos/fluent-migration"
+
+  nspr:
+    path: "/repos/nspr"
