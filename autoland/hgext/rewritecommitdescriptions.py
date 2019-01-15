@@ -4,9 +4,10 @@ import json
 import os
 import sys
 
+import rewrite
 from mercurial import (
-    context,
     cmdutil,
+    context,
     encoding,
     error,
     extensions,
@@ -16,27 +17,34 @@ from mercurial import (
 )
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-import rewrite
 
-minimumhgversion = '4.1'
-testedwith = '4.1 4.2'
+minimumhgversion = "4.1"
+testedwith = "4.1 4.2"
 
 cmdtable = {}
 
 # Mercurial 4.3 introduced registrar.command as a replacement for
 # cmdutil.command.
-if util.safehasattr(registrar, 'command'):
+if util.safehasattr(registrar, "command"):
     command = registrar.command(cmdtable)
 else:
     command = cmdutil.command(cmdtable)
 
 
-@command('rewritecommitdescriptions',
-         [('', 'descriptions', '',
-           'path to json file with new commit descriptions', 'string')],
-         'hg rewritecommitdescriptions')
+@command(
+    "rewritecommitdescriptions",
+    [
+        (
+            "",
+            "descriptions",
+            "",
+            "path to json file with new commit descriptions",
+            "string",
+        )
+    ],
+    "hg rewritecommitdescriptions",
+)
 def rewrite_commit_descriptions(ui, repo, base_node, descriptions=None):
-
     def sha1_short(node):
         return repo[node].hex()[:12]
 
@@ -45,9 +53,8 @@ def rewrite_commit_descriptions(ui, repo, base_node, descriptions=None):
 
     # Rewriting fails if the evolve extension is enabled.
     try:
-        extensions.find('evolve')
-        raise error.Abort('Cannot continue as the "evolve" extension is '
-                          'enabled.')
+        extensions.find("evolve")
+        raise error.Abort('Cannot continue as the "evolve" extension is ' "enabled.")
     except KeyError:
         pass
 
@@ -55,11 +62,12 @@ def rewrite_commit_descriptions(ui, repo, base_node, descriptions=None):
     # MozReview passes in short SHA1 (12 chars), so we have to use [:12] here
     # and in `add_node`.
     description_map = {}
-    with open(descriptions, 'rb') as f:
+    with open(descriptions, "rb") as f:
         raw_descriptions = json.load(f)
         for sha1 in raw_descriptions:
             description_map[sha1[:12]] = encoding.tolocal(
-                raw_descriptions[sha1].encode('utf-8'))
+                raw_descriptions[sha1].encode("utf-8")
+            )
 
     # Collect nodes listed by description_map.
     nodes = []
@@ -78,7 +86,7 @@ def rewrite_commit_descriptions(ui, repo, base_node, descriptions=None):
     nodes.reverse()
 
     if not nodes:
-        raise error.Abort('No commits found to be rewritten.')
+        raise error.Abort("No commits found to be rewritten.")
 
     # We need to store the original sha1 values because we won't be able to
     # look them up once they are rewritten.
@@ -93,9 +101,16 @@ def rewrite_commit_descriptions(ui, repo, base_node, descriptions=None):
         sha1 = ctx.hex()[:12]
         description = description_map[sha1]
 
-        memctx = context.memctx(repo, parents, description,
-                                ctx.files(), filectxfn, user=ctx.user(),
-                                date=ctx.date(), extra=ctx.extra())
+        memctx = context.memctx(
+            repo,
+            parents,
+            description,
+            ctx.files(),
+            filectxfn,
+            user=ctx.user(),
+            date=ctx.date(),
+            extra=ctx.extra(),
+        )
         status = ctx.p1().status(ctx)
         memctx.modified = lambda: status[0]
         memctx.added = lambda: status[1]
@@ -107,5 +122,4 @@ def rewrite_commit_descriptions(ui, repo, base_node, descriptions=None):
 
     # Output result.
     for node in nodes:
-        ui.write('rev: %s -> %s\n' % (original_sha1s[node],
-                                      sha1_full(node_map[node])))
+        ui.write("rev: %s -> %s\n" % (original_sha1s[node], sha1_full(node_map[node])))

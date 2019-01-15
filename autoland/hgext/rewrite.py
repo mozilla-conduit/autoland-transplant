@@ -3,20 +3,12 @@
 
 """Utility functions for rewriting changesets."""
 
-from collections import OrderedDict
 import inspect
+from collections import OrderedDict
 
-from mercurial import (
-    bookmarks,
-    cmdutil,
-    context,
-    hg,
-    lock as lockmod,
-    obsolete,
-    phases,
-    repair,
-    util,
-)
+from mercurial import bookmarks, cmdutil, context, hg
+from mercurial import lock as lockmod
+from mercurial import obsolete, phases, repair, util
 
 
 # Mercurial 3.5 renamed bookmarks.readcurrent to bookmarks.readactive.
@@ -24,9 +16,9 @@ from mercurial import (
 # localrepository._activebookmark is the easiest way to access the
 # active bookmark since it already has a bookmarks instance loaded.
 def activebookmark(repo):
-    if hasattr(repo, '_activebookmark'):
+    if hasattr(repo, "_activebookmark"):
         return repo._activebookmark
-    elif hasattr(bookmarks, 'readactive'):
+    elif hasattr(bookmarks, "readactive"):
         return bookmarks.readactive(repo)
     else:
         return bookmarks.readcurrent(repo)
@@ -60,6 +52,7 @@ def preservefilectx(oldctx):
     from the old changeset. This function returns a function suitable
     for preserving filectx data from a base changeset.
     """
+
     def filectxfn(repo, memctx, path):
         try:
             fctx = oldctx.filectx(path)
@@ -70,31 +63,40 @@ def preservefilectx(oldctx):
                 copied = copied[0]
 
             # isexec and islink didn't exist until Mercurial 3.2.
-            islink = 'l' in fctx.flags()
-            isexec = 'x' in fctx.flags()
+            islink = "l" in fctx.flags()
+            isexec = "x" in fctx.flags()
 
             # TRACKING hg45 memctx argument was renamed to changectx and
             # converted from a named argument to positional argument in 4.5.
             spec = inspect.getargspec(context.memfilectx.__init__)
 
-            if 'changectx' in spec.args:
-                return context.memfilectx(repo, memctx, path, fctx.data(),
-                                          islink=islink,
-                                          isexec=isexec,
-                                          copied=copied)
+            if "changectx" in spec.args:
+                return context.memfilectx(
+                    repo,
+                    memctx,
+                    path,
+                    fctx.data(),
+                    islink=islink,
+                    isexec=isexec,
+                    copied=copied,
+                )
             else:
-                return context.memfilectx(repo, path, fctx.data(),
-                                          islink=islink,
-                                          isexec=isexec,
-                                          copied=copied,
-                                          memctx=memctx)
+                return context.memfilectx(
+                    repo,
+                    path,
+                    fctx.data(),
+                    islink=islink,
+                    isexec=isexec,
+                    copied=copied,
+                    memctx=memctx,
+                )
         except KeyError:
             return None
 
     return filectxfn
 
 
-def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
+def replacechangesets(repo, oldnodes, createfn, backuptopic="replacing"):
     """Replace changesets with new versions.
 
     This is a generic function used to perform history rewriting.
@@ -137,18 +139,18 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
     # Validate function called properly.
     for node in oldnodes:
         if len(node) != 20:
-            raise util.Abort('replacechangesets expects 20 byte nodes')
+            raise util.Abort("replacechangesets expects 20 byte nodes")
 
     uoldrevs = [repo[node].rev() for node in oldnodes]
     oldrevs = sorted(uoldrevs)
     if oldrevs != uoldrevs:
-        raise util.Abort('must pass oldnodes in changelog order')
+        raise util.Abort("must pass oldnodes in changelog order")
 
     # We may perform stripping and stripping inside a nested transaction
     # is a recipe for disaster.
     # currenttransaction was added in 3.3. Copy the implementation until we
     # drop 3.2 compatibility.
-    if hasattr(repo, 'currenttransaction'):
+    if hasattr(repo, "currenttransaction"):
         intrans = repo.currenttransaction()
     else:
         if repo._transref and repo._transref().running():
@@ -157,13 +159,14 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
             intrans = False
 
     if intrans:
-        raise util.Abort('cannot call replacechangesets when a transaction '
-                         'is active')
+        raise util.Abort(
+            "cannot call replacechangesets when a transaction " "is active"
+        )
 
     # The revisions impacted by the current operation. This is essentially
     # all non-hidden children. We don't operate on hidden changesets because
     # there is no point - they are hidden and deemed not important.
-    impactedrevs = list(repo.filtered('visible').revs('%ld::', oldrevs))
+    impactedrevs = list(repo.filtered("visible").revs("%ld::", oldrevs))
 
     # If we'll need to update the working directory, don't do anything if there
     # are uncommitted changes, as this could cause a giant mess (merge
@@ -175,8 +178,8 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
         cmdutil.bailifchanged(repo)
 
     obsenabled = False
-    if hasattr(obsolete, 'isenabled'):
-        obsenabled = obsolete.isenabled(repo, 'createmarkers')
+    if hasattr(obsolete, "isenabled"):
+        obsenabled = obsolete.isenabled(repo, "createmarkers")
     else:
         obsenabled = obsolete._enabled
 
@@ -194,7 +197,7 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        tr = repo.transaction('replacechangesets')
+        tr = repo.transaction("replacechangesets")
 
         # Create the new changesets.
         revmap = OrderedDict()
@@ -202,14 +205,13 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
             oldctx = repo[oldnode]
 
             # Copy revmap out of paranoia.
-            newctx = createfn(repo, oldctx, dict(revmap),
-                              preservefilectx(oldctx))
+            newctx = createfn(repo, oldctx, dict(revmap), preservefilectx(oldctx))
 
             if not isinstance(newctx, context.memctx):
-                raise util.Abort('createfn must return a context.memctx')
+                raise util.Abort("createfn must return a context.memctx")
 
             if oldctx == newctx:
-                raise util.Abort('createfn must create a new changeset')
+                raise util.Abort("createfn must create a new changeset")
 
             newnode = newctx.commit()
             # Needed so .manifestnode() works, which memctx doesn't have.
@@ -218,7 +220,7 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
             # This makes the implementation significantly simpler as we don't
             # need to worry about merges when we do auto rebasing later.
             if oldctx.manifestnode() != newctx.manifestnode():
-                raise util.Abort('we do not allow replacements to modify files')
+                raise util.Abort("we do not allow replacements to modify files")
 
             revmap[oldctx.rev()] = newctx.rev()
             nodemap[oldnode] = newnode
@@ -236,15 +238,22 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
 
             oldctx = repo[rev]
             if oldctx.p1().rev() not in revmap:
-                raise util.Abort('unknown parent of child commit: %s' %
-                                 oldctx.hex(),
-                                 hint='please report this as a bug')
+                raise util.Abort(
+                    "unknown parent of child commit: %s" % oldctx.hex(),
+                    hint="please report this as a bug",
+                )
 
             parents = newparents(repo, oldctx, revmap)
-            mctx = context.memctx(repo, parents, oldctx.description(),
-                                  oldctx.files(), preservefilectx(oldctx),
-                                  user=oldctx.user(), date=oldctx.date(),
-                                  extra=oldctx.extra())
+            mctx = context.memctx(
+                repo,
+                parents,
+                oldctx.description(),
+                oldctx.files(),
+                preservefilectx(oldctx),
+                user=oldctx.user(),
+                date=oldctx.date(),
+                extra=oldctx.extra(),
+            )
             status = oldctx.p1().status(oldctx)
             mctx.modified = lambda: status[0]
             mctx.added = lambda: status[1]
@@ -257,14 +266,13 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
             # Retain phase.
             adjustphase(repo, tr, oldctx.phase(), newnode)
 
-            ph = repo.ui.config('phases', 'new-commit')
+            ph = repo.ui.config("phases", "new-commit")
             try:
-                repo.ui.setconfig('phases', 'new-commit', oldctx.phase(),
-                                  'rewriting')
+                repo.ui.setconfig("phases", "new-commit", oldctx.phase(), "rewriting")
                 newnode = mctx.commit()
                 revmap[rev] = repo[newnode].rev()
             finally:
-                repo.ui.setconfig('phases', 'new-commit', ph)
+                repo.ui.setconfig("phases", "new-commit", ph)
 
         # Move bookmarks to new nodes.
         bmchanges = []
@@ -279,7 +287,7 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
         if bmchanges:
             # TODO unconditionally call applychanges() when support for
             # Mercurial 4.1 is dropped.
-            if util.safehasattr(repo._bookmarks, 'applychanges'):
+            if util.safehasattr(repo._bookmarks, "applychanges"):
                 repo._bookmarks.applychanges(repo, tr, bmchanges)
             else:
                 for mark, newnode in bmchanges:
@@ -288,7 +296,7 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
                 repo._bookmarks.recordchange(tr)
 
         # Update references to rewritten MQ patches.
-        if hasattr(repo, 'mq'):
+        if hasattr(repo, "mq"):
             q = repo.mq
             for e in q.applied:
                 if e.node in nodemap:
@@ -308,7 +316,7 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
                 obsolete.createmarkers(repo, markers)
 
         # Move the working directory to the new node, if applicable.
-        wdirrev = repo['.'].rev()
+        wdirrev = repo["."].rev()
         if wdirrev in revmap:
             hg.updaterepo(repo, repo[revmap[wdirrev]].node(), True)
 
@@ -316,9 +324,10 @@ def replacechangesets(repo, oldnodes, createfn, backuptopic='replacing'):
         # changeset. Since we didn't do anything that should change the
         # active bookmark, we shouldn't need to adjust it.
         if activebookmark(repo) != oldactivebookmark:
-            raise util.Abort('active bookmark changed; '
-                             'this should not occur!',
-                             hint='please file a bug')
+            raise util.Abort(
+                "active bookmark changed; " "this should not occur!",
+                hint="please file a bug",
+            )
 
         tr.close()
 

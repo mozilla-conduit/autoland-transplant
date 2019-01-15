@@ -2,7 +2,7 @@ import json
 import os
 import re
 
-CONFIG_PATH = ''
+CONFIG_PATH = ""
 CONFIG = None
 LAST_MTIME = None
 
@@ -10,13 +10,14 @@ LAST_MTIME = None
 def find_config():
     global CONFIG_PATH
 
-    if 'CONFIG_FILE' in os.environ:
-        CONFIG_PATH = os.environ['CONFIG_FILE']
+    if "CONFIG_FILE" in os.environ:
+        CONFIG_PATH = os.environ["CONFIG_FILE"]
     else:
-        CONFIG_PATH = os.path.join(os.environ['HOME'], 'config.json')
+        CONFIG_PATH = os.path.join(os.environ["HOME"], "config.json")
     if not os.path.exists(CONFIG_PATH):
-        CONFIG_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   'config.json')
+        CONFIG_PATH = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "config.json"
+        )
 
 
 def get(key, default=None):
@@ -40,28 +41,28 @@ def get_repo(name):
     # Returns the configuration of a repository, containing the full path
     # to the repo, and the official name of the tree which can be fed into
     # treestatus.  'path' is guaranteed to be a path, 'tree' may be None.
-    repos = get('repos', [])
+    repos = get("repos", [])
 
-    repo = {'path': None, 'tree': None}
+    repo = {"path": None, "tree": None}
     if name in repos:
-        repo['path'] = repos[name].get('path')
-        repo['tree'] = repos[name].get('tree')
+        repo["path"] = repos[name].get("path")
+        repo["tree"] = repos[name].get("tree")
 
     # Default to paths under /repos/
-    if not repo['path']:
-        repo['path'] = '/repos/%s' % name
+    if not repo["path"]:
+        repo["path"] = "/repos/%s" % name
 
     # Set treestatus name automatically for integration repos.
-    if not repo['tree']:
-        m = re.match('ssh://hg\.mozilla\.org/integration/([^/]+)', name)
+    if not repo["tree"]:
+        m = re.match(r"ssh://hg\.mozilla\.org/integration/([^/]+)", name)
         if m and m.groups():
-            repo['tree'] = m.groups()[0]
+            repo["tree"] = m.groups()[0]
 
     return repo
 
 
 def testing():
-    return get('testing', False)
+    return get("testing", False)
 
 
 find_config()

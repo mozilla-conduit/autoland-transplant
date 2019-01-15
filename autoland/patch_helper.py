@@ -4,8 +4,8 @@
 
 import re
 
-HEADER_NAMES = ('User', 'Date', 'Node ID', 'Parent', 'Diff Start Line')
-DIFF_LINE_RE = re.compile(r'^diff\s+\S+\s+\S+')
+HEADER_NAMES = ("User", "Date", "Node ID", "Parent", "Diff Start Line")
+DIFF_LINE_RE = re.compile(r"^diff\s+\S+\s+\S+")
 
 
 class PatchHelper(object):
@@ -18,7 +18,7 @@ class PatchHelper(object):
         self._parse_header()
 
         # "Diff Start Line" is a lando/transplant extension.
-        self.diff_start_line = self.header('Diff Start Line')
+        self.diff_start_line = self.header("Diff Start Line")
         if self.diff_start_line:
             try:
                 self.diff_start_line = int(self.diff_start_line)
@@ -31,8 +31,9 @@ class PatchHelper(object):
 
     @staticmethod
     def _header_value(line, prefix):
-        m = re.search(r'^#\s+' + re.escape(prefix) + '\s+(.*)', line,
-                      flags=re.IGNORECASE)
+        m = re.search(
+            r"^#\s+" + re.escape(prefix) + "\s+(.*)", line, flags=re.IGNORECASE
+        )
         if not m:
             return None
         return m.group(1).strip()
@@ -42,7 +43,7 @@ class PatchHelper(object):
         self.patch.seek(0)
         try:
             for line in self.patch:
-                if not line.startswith('# '):
+                if not line.startswith("# "):
                     break
                 self.header_end_line_no += 1
                 for name in HEADER_NAMES:
@@ -77,7 +78,7 @@ class PatchHelper(object):
                         break
                     commit_desc.append(line)
 
-            return ''.join(commit_desc).strip()
+            return "".join(commit_desc).strip()
         finally:
             self.patch.seek(0)
 
@@ -85,7 +86,7 @@ class PatchHelper(object):
         """Writes whole patch to the specified file object."""
         try:
             while 1:
-                buf = self.patch.read(16*1024)
+                buf = self.patch.read(16 * 1024)
                 if not buf:
                     break
                 f.write(buf)
@@ -113,7 +114,7 @@ class PatchHelper(object):
                         break
 
             while 1:
-                buf = self.patch.read(16*1024)
+                buf = self.patch.read(16 * 1024)
                 if not buf:
                     break
                 f.write(buf)
