@@ -13,6 +13,13 @@ QUICK START
 `./create-virtualenv` to create the venv required for testing (and useful
 for IDE integration).  Requires PostgreSQL 9.5 client libraries.
 
+If installing psycopg2 fails on OSX with "ld: library not found for -lssl",
+install openssl with homebrew then tell pip to use the openssl libraries
+when building the PostgreSQL libraries:
+
+    $ brew install openssl
+    $ LDFLAGS="-I/usr/local/opt/openssl/include -L/usr/local/opt/openssl/lib" ./create-virtualenv
+
 `docker-compose up --build --detach` to start the environment.
 
 `clone-repo` to clone the Mercurial repository from your development
