@@ -2,3 +2,4 @@
 venv
 *.pyc
 dev-repo
+testing/tests/*.err
