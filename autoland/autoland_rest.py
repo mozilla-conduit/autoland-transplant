@@ -14,8 +14,15 @@ from flask import Flask, Response, abort, jsonify, make_response, request
 app = Flask(__name__, static_url_path="", static_folder="")
 
 
+@app.errorhandler(401)
+def auth_required(_):
+    return Response(
+        "Login required", 401, {"WWW-Authenticate": 'Basic realm="Login Required"'}
+    )
+
+
 @app.errorhandler(404)
-def not_found(error):
+def not_found(_):
     return make_response(jsonify({"error": "Not found"}), 404)
 
 
@@ -104,10 +111,10 @@ def check_patch_url(patch_url):
     return True
 
 
-def validate_request(request):
-    if request.json is None:
+def validate_request(req):
+    if req.json is None:
         raise ValueError("missing json")
-    request_json = request.json
+    request_json = req.json
 
     required = {"ldap_username", "tree", "rev", "pingback_url", "destination"}
     optional = set()
@@ -249,15 +256,14 @@ def autoland():
     """
 
     auth = request.authorization
-    auth_response = {"WWW-Authenticate": 'Basic realm="Login Required"'}
     if not auth:
-        return Response("Login required", 401, auth_response)
+        abort(401)
     if not check_auth(auth.username, auth.password):
         logging.warn(
             'Failed authentication for "%s" from %s'
             % (auth.username, request.remote_addr)
         )
-        return Response("Login required", 401, auth_response)
+        abort(401)
 
     try:
         validate_request(request)
@@ -265,38 +271,51 @@ def autoland():
         app.logger.warn("Bad Request from %s: %s" % (request.remote_addr, e))
         return make_response(jsonify({"error": "Bad request: %s" % e}), 400)
 
-    dbconn = get_dbconn()
-    cursor = dbconn.cursor()
+    try:
+        dbconn = get_dbconn()
+        cursor = dbconn.cursor()
 
-    query = """
-        SELECT created, request->>'ldap_username'
-          FROM Transplant
-         WHERE landed IS NULL
-               AND request->>'rev' = %s
-               AND request->>'destination' = %s
-    """
-    cursor.execute(query, (request.json["rev"], request.json["destination"]))
-    in_flight = cursor.fetchone()
-    if in_flight:
-        error = (
-            "Bad Request: a request to land revision %s to %s is already "
-            "in progress" % (request.json["rev"], request.json["destination"])
+        query = """
+            SELECT created, request->>'ldap_username'
+              FROM Transplant
+             WHERE landed IS NULL
+                   AND request->>'rev' = %s
+                   AND request->>'destination' = %s
+        """
+        cursor.execute(query, (request.json["rev"], request.json["destination"]))
+        in_flight = cursor.fetchone()
+        if in_flight:
+            error = (
+                "Bad Request: a request to land revision %s to %s is already "
+                "in progress" % (request.json["rev"], request.json["destination"])
+            )
+            app.logger.warn("%s from %s at %s" % (error, in_flight[0], in_flight[1]))
+            return make_response(jsonify({"error": error}), 400)
+
+        app.logger.info("received transplant request: %s" % json.dumps(request.json))
+
+        query = """
+            insert into Transplant(destination, request)
+            values (%s, %s)
+            returning id
+        """
+        cursor.execute(query, (request.json["destination"], json.dumps(request.json)))
+        request_id = cursor.fetchone()[0]
+        dbconn.commit()
+
+        return jsonify({"request_id": request_id})
+    except psycopg2.Error as e:
+        msg = "Database error trying to land %s onto %s: %s %s" % (
+            request.json["rev"],
+            request.json["destination"],
+            e.pgcode,
+            e.pgerror,
         )
-        app.logger.warn("%s from %s at %s" % (error, in_flight[0], in_flight[1]))
-        return make_response(jsonify({"error": error}), 400)
-
-    app.logger.info("received transplant request: %s" % json.dumps(request.json))
-
-    query = """
-        insert into Transplant(destination, request)
-        values (%s, %s)
-        returning id
-    """
-    cursor.execute(query, (request.json["destination"], json.dumps(request.json)))
-    request_id = cursor.fetchone()[0]
-    dbconn.commit()
-
-    return jsonify({"request_id": request_id})
+        app.logger.error(msg)
+        return make_response(jsonify({"error": msg}), 500)
+    except Exception as e:
+        app.logger.exception(e)
+        return make_response(jsonify({"error": "Internal Error: %s" % e}), 500)
 
 
 @app.route("/autoland/status/<request_id>")
@@ -320,9 +339,9 @@ def autoland_status(request_id):
 
     row = cursor.fetchone()
     if row:
-        destination, request, landed, result = row
+        destination, req, landed, result = row
 
-        status = request.copy()
+        status = req.copy()
         del status["pingback_url"]
         status["destination"] = destination
         status["landed"] = landed
