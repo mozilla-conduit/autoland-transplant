@@ -7,7 +7,8 @@ import os
 import subprocess
 import time
 
-import requests
+import requests.adapters
+from urllib3.util.retry import Retry
 
 DEBUG = bool(os.getenv("DEBUG"))
 ROOT = os.path.abspath(os.path.dirname(__file__))
@@ -15,6 +16,12 @@ RUN_TESTS = os.path.join(ROOT, "..", "..", "run-tests")
 AUTOLAND_URL = "http://localhost:%s/autoland" % os.getenv("HOST_AUTOLAND")
 
 POLL_TIMEOUT = 10  # seconds
+
+# autoland_rest throws BadStatusLine errors while it's starting up - retry
+requests_session = requests.Session()
+Retry.BACKOFF_MAX = 0.25
+retry = Retry(total=10, method_whitelist=False, backoff_factor=0.1)
+requests_session.mount("http://", requests.adapters.HTTPAdapter(max_retries=retry))
 
 
 def post_job(args):
@@ -38,7 +45,7 @@ def post_job(args):
         with open(args.patch_file) as f:
             data["patch"] = base64.b64encode(f.read())
 
-    r = requests.post(
+    r = requests_session.post(
         AUTOLAND_URL,
         data=json.dumps(data, sort_keys=True),
         headers={"Content-Type": "application/json"},
@@ -52,13 +59,13 @@ def job_status(args):
     url = "%s/status/%s" % (AUTOLAND_URL, args.request_id)
 
     if not args.poll:
-        r = requests.get(url)
+        r = requests_session.get(url)
         print(r.status_code, r.text)
         return
 
     start_time = time.time()
     while time.time() - start_time < POLL_TIMEOUT:
-        r = requests.get(url)
+        r = requests_session.get(url)
         if r.status_code != 200 or json.loads(r.text)["landed"] is not None:
             print(r.status_code, r.text)
             return
