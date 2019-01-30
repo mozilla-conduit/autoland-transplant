@@ -43,3 +43,6 @@ repos:
 
   nspr:
     path: "/repos/nspr"
+
+  taskgraph:
+    path: "/repos/taskgraph"
