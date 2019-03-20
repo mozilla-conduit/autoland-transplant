@@ -46,3 +46,6 @@ repos:
 
   taskgraph:
     path: "/repos/taskgraph"
+
+  nss:
+    path: "/repos/nss"
