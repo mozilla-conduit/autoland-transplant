@@ -210,6 +210,7 @@ def handle_pending_transplants(dbconn):
 
             elif (
                 "unresolved conflicts (see hg resolve" in result
+                or "hunk FAILED -- saving rejects to file" in result
                 or "hunks FAILED -- saving rejects to file" in result
             ):
                 logger.info(

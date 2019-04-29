@@ -388,29 +388,52 @@ class PatchTransplant(Transplant):
             patch.write_diff(diff_temp)
             diff_temp.flush()
 
-            # Apply the patch, with file rename detection (similarity).
-            # Using 95 as the similarity to match automv's default.
-            #
             # XXX Using `hg import` here is less than ideal because it isn't
             # using a 3-way merge. It would be better to use
             # `hg import --exact` then `hg rebase`, however we aren't
             # guaranteed to have the changeset's parent in the local repo.
-            self.run_hg(["import", "-s", "95", "--no-commit", diff_temp.name])
+
+            try:
+                # Fall back to 'patch' if hg's internal code fails (to work around
+                # hg bugs/limitations).
+
+                # In tests if the patch contains a 'Fail HG Import' header we simulate
+                # a failure from hg's internal code.
+                if config.testing() and patch.header("Fail HG Import"):
+                    logger.info("testing: forcing patch fallback")
+                    raise Exception("1 out of 1 hunk FAILED -- saving rejects to file")
+
+                # Apply the patch, with file rename detection (similarity).
+                # Using 95 as the similarity to match automv's default.
+                self.run_hg(["import", "-s", "95", "--no-commit", diff_temp.name])
+
+            except Exception as e:
+                msg = str(e)
+                if (
+                    "hunk FAILED -- saving rejects to file" in msg
+                    or "hunks " "FAILED -- saving rejects to file" in msg
+                ):
+                    # Try again using 'patch' instead of hg's internal patch utility.
+                    logger.info("import failed, trying with 'patch': %s" % e)
+                    try:
+                        self.run_hg(
+                            ["import"]
+                            + ["-s", "95"]
+                            + ["--no-commit"]
+                            + ["--config", "ui.patch=patch"]
+                            + [diff_temp.name]
+                        )
+                    except hglib.error.CommandError as hg_error:
+                        raise Exception(hg_error.out)
 
             # Commit using the extracted date, user, and commit desc.
             # --landing_system is provided by the set_landing_system hgext.
             self.run_hg(
-                [
-                    "commit",
-                    "--date",
-                    patch.header("Date"),
-                    "--user",
-                    patch.header("User"),
-                    "--landing_system",
-                    self.landing_system_id,
-                    "--logfile",
-                    desc_temp.name,
-                ]
+                ["commit"]
+                + ["--date", patch.header("Date")]
+                + ["--user", patch.header("User")]
+                + ["--landing_system", self.landing_system_id]
+                + ["--logfile", desc_temp.name]
             )
 
     @staticmethod

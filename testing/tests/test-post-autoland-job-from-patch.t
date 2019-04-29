@@ -150,6 +150,34 @@ Bad Merge (using the now obsolete inline-patch created earlier)
   $ autolandctl job-status 7 --poll
   (200, u'{"destination":"land-repo","error_msg":"We\'re sorry, Autoland could not rebase your commits for you automatically. Please manually rebase your commits and try again.*}\n') (glob)
 
+Test falling back to patch
+
+  $ echo foo4 > foo
+  $ hg commit -m 'Bug 1 - too much stuff to hold; r?cthulhu'
+  $ hg export > $TESTTMP/patch3
+  $ perl -pe 's/^(# User)/# Fail HG Import: True\n$1/' < $TESTTMP/patch3 > $TESTTMP/patch
+  $ hg push
+  pushing to $HGWEB_URL/test-repo
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+  $ autolandctl post-job test-repo p4 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
+  (200, u'{"request_id":8}\n')
+  $ autolandctl job-status 8 --poll
+  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch":"*","push_bookmark":"bookmark","result":"a1cce11f4932b53b2a12feb302203c42d53e9016","rev":"p4","tree":"test-repo"}\n') (glob)
+  $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
+  6:Bug 1 - too much stuff to hold; r?cthulhu:public:branch=default:moz-landing-system=lando
+  5:Bug 1 - \xe3\x81\x93\xe3\x82\x93\xe3\x81\xab\xe3\x81\xa1\xe3\x81\xaf; r?cthulhu:public:branch=default:moz-landing-system=lando (esc)
+  4:Bug 1 - more goodness; r?cthulhu:public:branch=default:moz-landing-system=lando
+  3:Bug 1 - even more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  2:Bug 1 - some more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
+  0:initial commit:public:branch=default
+
+
 Create a commit to test on Try
 
   $ echo try > foo
@@ -177,9 +205,9 @@ Ensure unexpected files in the repo path are not landed.
 
   $ autolandctl exec touch /repos/test-repo/rogue
   $ autolandctl post-job test-repo p9 land-repo --patch-url http://hgweb/test-repo/raw-rev/$REV
-  (200, u'{"request_id":8}\n')
-  $ autolandctl job-status 8 --poll
-  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch_urls":["http://hgweb/test-repo/raw-rev/6511e0f7ffaf"],"result":"2788b8f97bf3a9eaa894eaaee06337f436e08199","rev":"p9","tree":"test-repo"}\n')
+  (200, u'{"request_id":9}\n')
+  $ autolandctl job-status 9 --poll
+  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch_urls":["http://hgweb/test-repo/raw-rev/ca6d3b938cfa"],"result":"9f2de2f2c973baab51cdce274313cda926fb2208","rev":"p9","tree":"test-repo"}\n')
   $ autolandctl exec --container=hg hg -q -R /repos/land-repo update tip
   $ autolandctl exec --container=hg hg files --cwd /repos/land-repo
   foo
@@ -189,19 +217,19 @@ Test pingback url whitelist.  localhost, private IPs, and example.com are in
 the whitelist. example.org is not.
 
   $ autolandctl post-job test-repo p10 land-repo --pingback-url http://example.com:9898 --patch-url http://hgweb/test-repo/raw-rev/$REV
-  (200, u'{"request_id":9}\n')
-  $ autolandctl post-job test-repo p11 land-repo --pingback-url http://localhost --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":10}\n')
-  $ autolandctl post-job test-repo p12 land-repo --pingback-url http://localhost --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p11 land-repo --pingback-url http://localhost --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":11}\n')
-  $ autolandctl post-job test-repo p13 land-repo --pingback-url http://127.0.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p12 land-repo --pingback-url http://localhost --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":12}\n')
-  $ autolandctl post-job test-repo p14 land-repo --pingback-url http://192.168.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p13 land-repo --pingback-url http://127.0.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":13}\n')
-  $ autolandctl post-job test-repo p15 land-repo --pingback-url http://172.16.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p14 land-repo --pingback-url http://192.168.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":14}\n')
-  $ autolandctl post-job test-repo p16 land-repo --pingback-url http://10.0.0.1:443 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p15 land-repo --pingback-url http://172.16.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":15}\n')
+  $ autolandctl post-job test-repo p16 land-repo --pingback-url http://10.0.0.1:443 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  (200, u'{"request_id":16}\n')
   $ autolandctl post-job test-repo p17 land-repo --pingback-url http://8.8.8.8:443 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (400, u'{"error":"Bad request: bad pingback_url"}\n')
   $ autolandctl post-job test-repo p18 land-repo --pingback-url http://example.org:9898 --patch-url http://hgweb/test-repo/raw-rev/$REV
@@ -213,6 +241,6 @@ guarentee the first request is still in the queue when the second is submitted.
   $ docker stop autoland_test.daemon
   autoland_test.daemon
   $ autolandctl post-job test-repo p19 land-repo --trysyntax "stuff"
-  (200, u'{"request_id":16}\n')
+  (200, u'{"request_id":17}\n')
   $ autolandctl post-job test-repo p19 land-repo --trysyntax "stuff"
   (400, u'{"error":"Bad Request: a request to land revision p19 to land-repo is already in progress"}\n')

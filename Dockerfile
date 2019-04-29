@@ -5,7 +5,7 @@
 FROM centos:7.4.1708
 
 # o/s dependencies
-RUN yum install -y curl gcc gettext httpd mod_wsgi postgresql postgresql-devel postgresql-libs python-devel \
+RUN yum install -y curl gcc gettext httpd mod_wsgi postgresql postgresql-devel postgresql-libs python-devel patch \
     && curl -s https://bootstrap.pypa.io/get-pip.py | python \
     && pip install virtualenv
 
