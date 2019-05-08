@@ -74,9 +74,9 @@ class Transplant(object):
         # Don't let unicode leak into command arguments.
         assert isinstance(trysyntax, str), "trysyntax arg is not str"
 
-        remote_tip = self.update_repo()
+        target_cset = self.update_repo()
 
-        self.apply_changes(remote_tip)
+        self.apply_changes(target_cset)
 
         if not trysyntax.startswith("try: "):
             trysyntax = "try: %s" % trysyntax
@@ -109,9 +109,9 @@ class Transplant(object):
         # Don't let unicode leak into command arguments.
         assert isinstance(bookmark, str), "bookmark arg is not str"
 
-        remote_tip = self.update_repo()
+        target_cset = self.update_repo()
 
-        rev = self.apply_changes(remote_tip)
+        rev = self.apply_changes(target_cset)
         self.run_hg_cmds(
             [["bookmark", bookmark], ["push", "-B", bookmark, self.destination]]
         )
@@ -119,26 +119,26 @@ class Transplant(object):
         return rev
 
     def push(self):
-        remote_tip = self.update_repo()
+        target_cset = self.update_repo()
 
-        rev = self.apply_changes(remote_tip)
+        rev = self.apply_changes(target_cset)
         self.run_hg_cmds([["push", "-r", "tip", self.destination]])
 
         return rev
 
     def update_repo(self):
         # Obtain remote tip. We assume there is only a single head.
-        remote_tip = self.get_remote_tip()
+        target_cset = self.get_remote_head()
 
         # Strip any lingering changes.
         self.clean_repo()
 
         # Pull from "upstream".
-        self.update_from_upstream(remote_tip)
+        self.update_from_upstream(target_cset)
 
-        return remote_tip
+        return target_cset
 
-    def apply_changes(self, remote_tip):
+    def apply_changes(self, target_cset):
         raise NotImplemented("abstract method call: apply_changes")
 
     def run_hg(self, args):
@@ -192,14 +192,16 @@ class Transplant(object):
             ]
         )
 
-    def get_remote_tip(self):
-        # Obtain remote tip. We assume there is only a single head.
+    def get_remote_head(self):
+        # Obtain remote head. We assume there is only a single head.
+        cset = self.run_hg_cmds([["identify", "upstream", "-r", "default"]])
+
         # Output can contain bookmark or branch name after a space. Only take
         # first component.
-        remote_tip = self.run_hg_cmds([["identify", "upstream", "-r", "tip"]])
-        remote_tip = remote_tip.split()[0]
-        assert len(remote_tip) == 12, remote_tip
-        return remote_tip
+        cset = cset.split()[0]
+
+        assert len(cset) == 12, cset
+        return cset
 
     def update_from_upstream(self, remote_rev):
         # Pull "upstream" and update to remote tip.
@@ -220,16 +222,16 @@ class Transplant(object):
                 else:
                     raise HgCommandError(cmd, e.out)
 
-    def rebase(self, base_revision, remote_tip):
+    def rebase(self, base_revision, target_cset):
         # Perform rebase if necessary. Returns tip revision.
-        cmd = ["rebase", "-s", base_revision, "-d", remote_tip]
+        cmd = ["rebase", "-s", base_revision, "-d", target_cset]
 
-        assert len(remote_tip) == 12
+        assert len(target_cset) == 12
 
         # If rebasing onto the null revision, force the merge policy to take
         # our content, as there is no content in the destination to conflict
         # with us.
-        if remote_tip == "0" * 12:
+        if target_cset == "0" * 12:
             cmd.extend(["--tool", ":other"])
 
         try:
@@ -248,7 +250,7 @@ class RepoTransplant(Transplant):
         self.landing_system_id = "mozreview"
         self.commit_descriptions = commit_descriptions
 
-    def apply_changes(self, remote_tip):
+    def apply_changes(self, target_cset):
         # Pull in changes from the source repo.
         cmds = [["pull", self.tree, "-r", self.source_rev], ["update", self.source_rev]]
         for cmd in cmds:
@@ -269,7 +271,7 @@ class RepoTransplant(Transplant):
         base_revision = self.rewrite_commit_descriptions()
         logger.info("%s - base revision: %s" % (self.source_rev, base_revision))
 
-        base_revision = self.rebase(base_revision, remote_tip)
+        base_revision = self.rebase(base_revision, target_cset)
 
         self.validate_descriptions()
         return base_revision
@@ -337,7 +339,7 @@ class PatchTransplant(Transplant):
         self.patch_urls = patch_urls
         self.patch = patch
 
-    def apply_changes(self, remote_tip):
+    def apply_changes(self, target_cset):
         dirty_files = self.dirty_files()
         if dirty_files:
             logger.error("repo is not clean: %s" % " ".join(dirty_files))
@@ -348,7 +350,7 @@ class PatchTransplant(Transplant):
                 "Please file a bug."
             )
 
-        self.run_hg(["update", remote_tip])
+        self.run_hg(["update", target_cset])
 
         if config.testing() and self.patch:
             # Dev/Testing permits passing in a patch within the request.
