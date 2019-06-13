@@ -155,7 +155,7 @@ Test falling back to patch
   $ echo foo4 > foo
   $ hg commit -m 'Bug 1 - too much stuff to hold; r?cthulhu'
   $ hg export > $TESTTMP/patch3
-  $ perl -pe 's/^(# User)/# Fail HG Import: True\n$1/' < $TESTTMP/patch3 > $TESTTMP/patch
+  $ perl -pe 's/^(# User)/# Fail HG Import True\n$1/' < $TESTTMP/patch3 > $TESTTMP/patch
   $ hg push
   pushing to $HGWEB_URL/test-repo
   searching for changes

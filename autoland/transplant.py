@@ -163,12 +163,14 @@ class Transplant(object):
                 raise HgCommandError(cmd, e.out)
         return last_result
 
-    def clean_repo(self):
+    def clean_repo(self, strip_non_public_commits=True):
         # Strip any lingering draft changesets.
-        try:
-            self.run_hg(["strip", "--no-backup", "-r", "not public()"])
-        except hglib.error.CommandError:
-            pass
+        if strip_non_public_commits:
+            try:
+                self.run_hg(["strip", "--no-backup", "-r", "not public()"])
+            except hglib.error.CommandError:
+                pass
+
         # Clean working directory.
         try:
             self.run_hg(["--quiet", "revert", "--no-backup", "--all"])
@@ -403,6 +405,16 @@ class PatchTransplant(Transplant):
                 # a failure from hg's internal code.
                 if config.testing() and patch.header("Fail HG Import"):
                     logger.info("testing: forcing patch fallback")
+
+                    # Create junk to ensure it gets cleaned up.
+                    import glob
+
+                    filename = [
+                        f for f in glob.glob("%s/*" % self.path) if os.path.isfile(f)
+                    ][0]
+                    with open(filename, "w") as f:
+                        f.write("junk\n")
+
                     raise Exception("1 out of 1 hunk FAILED -- saving rejects to file")
 
                 # Apply the patch, with file rename detection (similarity).
@@ -416,6 +428,11 @@ class PatchTransplant(Transplant):
                     or "hunks " "FAILED -- saving rejects to file" in msg
                 ):
                     # Try again using 'patch' instead of hg's internal patch utility.
+
+                    # But first reset to a clean repo as hg's attempt might have
+                    # been partially applied.
+                    self.clean_repo(strip_non_public_commits=False)
+
                     logger.info("import failed, trying with 'patch': %s" % e)
                     try:
                         self.run_hg(

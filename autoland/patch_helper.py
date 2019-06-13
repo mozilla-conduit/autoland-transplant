@@ -4,7 +4,14 @@
 
 import re
 
-HEADER_NAMES = ("User", "Date", "Node ID", "Parent", "Diff Start Line")
+HEADER_NAMES = (
+    "User",
+    "Date",
+    "Node ID",
+    "Parent",
+    "Diff Start Line",
+    "Fail HG Import",
+)
 DIFF_LINE_RE = re.compile(r"^diff\s+\S+\s+\S+")
 
 
