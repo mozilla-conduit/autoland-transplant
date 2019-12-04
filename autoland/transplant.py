@@ -442,6 +442,9 @@ class PatchTransplant(Transplant):
                             + ["--config", "ui.patch=patch"]
                             + [diff_temp.name]
                         )
+                        # When using an external patch util mercurial won't
+                        # automatically handle add/remove/renames.
+                        self.run_hg(["addremove", "-s", "95"])
                     except hglib.error.CommandError as hg_error:
                         raise Exception(hg_error.out)
 
