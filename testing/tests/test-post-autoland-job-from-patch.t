@@ -277,6 +277,44 @@ Test falling back to patch
   1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
   0:initial commit:public:branch=default
 
+Patching a file that doesn't exist; also need to touch other files to avoid
+a "nothing changed" error.
+
+  $ echo foo > foo2
+  $ hg commit -A -m 'Bug 1 - why is there so much stuff; r?cthulhu'
+  adding foo2
+  $ hg export --git > $TESTTMP/patch4
+  $ cat >> $TESTTMP/patch4 << EOF
+  > diff --git a/does-not-exist.txt b/some-other-name.txt
+  > rename from does-not-exist.txt
+  > rename to some-other-name.txt
+  > EOF
+  $ hg push
+  pushing to $HGWEB_URL/test-repo
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+
+  $ autolandctl post-job test-repo p9 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch4
+  (200, u'{"request_id":9}\n')
+  $ autolandctl job-status 9 --poll
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "(255, \"applying *\ (glob)
+  ../../../repos/test-repo/does-not-exist.txt not tracked!\
+  abort: source file 'does-not-exist.txt' does not exist\", '')",
+    "landed": false,
+    "ldap_username": "autolanduser@example.com",
+    "patch": "*", (glob)
+    "push_bookmark": "bookmark",
+    "result": "",
+    "rev": "p9",
+    "tree": "test-repo"
+  }
+
 Create a commit to test on Try
 
   $ echo try > foo
@@ -303,9 +341,9 @@ Getting status for an unknown job should return a 404
 Ensure unexpected files in the repo path are not landed.
 
   $ autolandctl exec touch /repos/test-repo/rogue
-  $ autolandctl post-job test-repo p9 land-repo --patch-url http://hgweb/test-repo/raw-rev/$REV
-  (200, u'{"request_id":9}\n')
-  $ autolandctl job-status 9 --poll
+  $ autolandctl post-job test-repo p10 land-repo --patch-url http://hgweb/test-repo/raw-rev/$REV
+  (200, u'{"request_id":10}\n')
+  $ autolandctl job-status 10 --poll
   200
   {
     "destination": "land-repo",
@@ -313,10 +351,10 @@ Ensure unexpected files in the repo path are not landed.
     "landed": true,
     "ldap_username": "autolanduser@example.com",
     "patch_urls": [
-      "http://hgweb/test-repo/raw-rev/ca6d3b938cfa"
+      "http://hgweb/test-repo/raw-rev/5bbc16f7d0fc"
     ],
     "result": "9f2de2f2c973baab51cdce274313cda926fb2208",
-    "rev": "p9",
+    "rev": "p10",
     "tree": "test-repo"
   }
   $ autolandctl exec --container=hg hg -q -R /repos/land-repo update tip
@@ -327,20 +365,20 @@ Ensure unexpected files in the repo path are not landed.
 Test pingback url whitelist.  localhost, private IPs, and example.com are in
 the whitelist. example.org is not.
 
-  $ autolandctl post-job test-repo p10 land-repo --pingback-url http://example.com:9898 --patch-url http://hgweb/test-repo/raw-rev/$REV
-  (200, u'{"request_id":10}\n')
-  $ autolandctl post-job test-repo p11 land-repo --pingback-url http://localhost --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p11 land-repo --pingback-url http://example.com:9898 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":11}\n')
   $ autolandctl post-job test-repo p12 land-repo --pingback-url http://localhost --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":12}\n')
-  $ autolandctl post-job test-repo p13 land-repo --pingback-url http://127.0.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p13 land-repo --pingback-url http://localhost --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":13}\n')
-  $ autolandctl post-job test-repo p14 land-repo --pingback-url http://192.168.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p14 land-repo --pingback-url http://127.0.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":14}\n')
-  $ autolandctl post-job test-repo p15 land-repo --pingback-url http://172.16.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p15 land-repo --pingback-url http://192.168.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":15}\n')
-  $ autolandctl post-job test-repo p16 land-repo --pingback-url http://10.0.0.1:443 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p16 land-repo --pingback-url http://172.16.0.1 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":16}\n')
+  $ autolandctl post-job test-repo p17 land-repo --pingback-url http://10.0.0.1:443 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  (200, u'{"request_id":17}\n')
   $ autolandctl post-job test-repo p0 land-repo --pingback-url http://8.8.8.8:443 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (400, u'{"error":"Bad request: bad pingback_url"}\n')
   $ autolandctl post-job test-repo p0 land-repo --pingback-url http://example.org:9898 --patch-url http://hgweb/test-repo/raw-rev/$REV
@@ -351,7 +389,7 @@ guarentee the first request is still in the queue when the second is submitted.
 
   $ docker stop autoland_test.daemon
   autoland_test.daemon
-  $ autolandctl post-job test-repo p17 land-repo --trysyntax "stuff"
-  (200, u'{"request_id":17}\n')
-  $ autolandctl post-job test-repo p17 land-repo --trysyntax "stuff"
-  (400, u'{"error":"Bad Request: a request to land revision p17 to land-repo is already in progress"}\n')
+  $ autolandctl post-job test-repo p18 land-repo --trysyntax "stuff"
+  (200, u'{"request_id":18}\n')
+  $ autolandctl post-job test-repo p18 land-repo --trysyntax "stuff"
+  (400, u'{"error":"Bad Request: a request to land revision p18 to land-repo is already in progress"}\n')

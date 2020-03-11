@@ -425,7 +425,7 @@ class PatchTransplant(Transplant):
                 msg = str(e)
                 if (
                     "hunk FAILED -- saving rejects to file" in msg
-                    or "hunks " "FAILED -- saving rejects to file" in msg
+                    or "hunks FAILED -- saving rejects to file" in msg
                 ):
                     # Try again using 'patch' instead of hg's internal patch utility.
 
@@ -447,6 +447,8 @@ class PatchTransplant(Transplant):
                         self.run_hg(["addremove", "-s", "95"])
                     except hglib.error.CommandError as hg_error:
                         raise Exception(hg_error.out)
+                else:
+                    raise
 
             # Commit using the extracted date, user, and commit desc.
             # --landing_system is provided by the set_landing_system hgext.
