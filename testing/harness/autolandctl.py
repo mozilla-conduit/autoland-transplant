@@ -66,8 +66,18 @@ def job_status(args):
     start_time = time.time()
     while time.time() - start_time < POLL_TIMEOUT:
         r = requests_session.get(url)
-        if r.status_code != 200 or json.loads(r.text)["landed"] is not None:
-            print(r.status_code, r.text)
+        res = r.json()
+        if r.status_code != 200 or res["landed"] is not None:
+            if args.raw:
+                print(r.text)
+            else:
+                print(r.status_code)
+                res_json = json.dumps(
+                    res, indent=2, sort_keys=True, separators=(",", ": ")
+                )
+                # replace escaped \n with literal to make it easier to match on errors
+                # empty lines and trailing \n make writing tests harder, so remove those
+                print(res_json.replace("\\n", "\n").replace("\n\n", "\n").rstrip())
             return
         time.sleep(0.1)
 
@@ -143,6 +153,7 @@ def main():
             help="Poll the status until the job is serviced or %s has elapsed"
             % POLL_TIMEOUT,
         )
+        cmd.add_argument("--raw", action="store_true", help="Output unmodified JSON")
         cmd.set_defaults(func=job_status)
 
         # exec

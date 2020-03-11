@@ -26,23 +26,47 @@ Posting a job with bad credentials should fail
 
 Post a job from http url should fail
 
-  $ autolandctl post-job test-repo p1 land-repo --patch-url http://example.com/p2.patch
+  $ autolandctl post-job test-repo p0 land-repo --patch-url http://example.com/p2.patch
   (400, u'{"error":"Bad request: bad patch_url"}\n')
 
 Post a job from s3 url.  This should fail because we don't have a mock
 environment for S3.
 
-  $ autolandctl post-job test-repo p2 land-repo --patch-url s3://lando-dev/p1.patch
+  $ autolandctl post-job test-repo p1 land-repo --patch-url s3://lando-dev/p1.patch
   (200, u'{"request_id":1}\n')
   $ autolandctl job-status 1 --poll
-  (200, u'{"destination":"land-repo","error_msg":"unable to download s3://lando-dev/p1.patch: permission denied","landed":false,"ldap_username":"autolanduser@example.com","patch_urls":["s3://lando-dev/p1.patch"],"result":"","rev":"p2","tree":"test-repo"}\n')
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "unable to download s3://lando-dev/p1.patch: permission denied",
+    "landed": false,
+    "ldap_username": "autolanduser@example.com",
+    "patch_urls": [
+      "s3://lando-dev/p1.patch"
+    ],
+    "result": "",
+    "rev": "p1",
+    "tree": "test-repo"
+  }
 
 Post a job from private ip
 
-  $ autolandctl post-job test-repo p3 land-repo --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p2 land-repo --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":2}\n')
   $ autolandctl job-status 2 --poll
-  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch_urls":["http://hgweb/test-repo/raw-rev/3db0055aa281"],"result":"6a1a92b3919045841a41fb370ed7c6a633f82657","rev":"p3","tree":"test-repo"}\n')
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "",
+    "landed": true,
+    "ldap_username": "autolanduser@example.com",
+    "patch_urls": [
+      "http://hgweb/test-repo/raw-rev/3db0055aa281"
+    ],
+    "result": "6a1a92b3919045841a41fb370ed7c6a633f82657",
+    "rev": "p2",
+    "tree": "test-repo"
+  }
   $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
   1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
   0:initial commit:public:branch=default
@@ -60,10 +84,21 @@ Post a job using an inline patch
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
 
-  $ autolandctl post-job test-repo p4 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
+  $ autolandctl post-job test-repo p3 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
   (200, u'{"request_id":3}\n')
   $ autolandctl job-status 3 --poll
-  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch":"IyBIRyBjaGFuZ2VzZXQgcGF0Y2gKIyBVc2VyIHRlc3QKIyBEYXRlIDAgMAojICAgICAgVGh1IEphbiAwMSAwMDowMDowMCAxOTcwICswMDAwCiMgTm9kZSBJRCA0NTAzYTIwZjFiYWRhOGI0NzA4YTJkMDJkODA3ZDE5MGJmM2QxNjdmCiMgUGFyZW50ICAzZGIwMDU1YWEyODE0YTdhMzljNGMyZjE3MjY0YjExZWYzNTg0MzMzCkJ1ZyAxIC0gc29tZSBtb3JlIHN0dWZmOyByP2N0aHVsaHUKCmRpZmYgLXIgM2RiMDA1NWFhMjgxIC1yIDQ1MDNhMjBmMWJhZCBmb28KLS0tIGEvZm9vCVRodSBKYW4gMDEgMDA6MDA6MDAgMTk3MCArMDAwMAorKysgYi9mb28JVGh1IEphbiAwMSAwMDowMDowMCAxOTcwICswMDAwCkBAIC0xLDEgKzEsMSBAQAotaW5pdGlhbAorZm9vMgo=","push_bookmark":"bookmark","result":"91bf2a9abc542b18810989b5eeff70debe462f11","rev":"p4","tree":"test-repo"}\n')
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "",
+    "landed": true,
+    "ldap_username": "autolanduser@example.com",
+    "patch": "*", (glob)
+    "push_bookmark": "bookmark",
+    "result": "91bf2a9abc542b18810989b5eeff70debe462f11",
+    "rev": "p3",
+    "tree": "test-repo"
+  }
   $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
   2:Bug 1 - some more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
   1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
@@ -87,7 +122,18 @@ Post a job using an inline patch with 'Diff Start Line'
   $ autolandctl post-job test-repo p4 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
   (200, u'{"request_id":4}\n')
   $ autolandctl job-status 4 --poll
-  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch":"*","push_bookmark":"bookmark","result":"c1c0ffb7147ada279f474bd1ba164e0796ed5f07","rev":"p4","tree":"test-repo"}\n') (glob)
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "",
+    "landed": true,
+    "ldap_username": "autolanduser@example.com",
+    "patch": "*", (glob)
+    "push_bookmark": "bookmark",
+    "result": "c1c0ffb7147ada279f474bd1ba164e0796ed5f07",
+    "rev": "p4",
+    "tree": "test-repo"
+  }
   $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
   3:Bug 1 - even more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
   2:Bug 1 - some more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
@@ -110,7 +156,20 @@ Post a job using a bookmark
   $ autolandctl post-job test-repo p5 land-repo --push-bookmark "bookmark" --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":5}\n')
   $ autolandctl job-status 5 --poll
-  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch_urls":["http://hgweb/test-repo/raw-rev/85e19ca28526"],"push_bookmark":"bookmark","result":"125fb26594d32e024f056ca42da2d01598e662df","rev":"p5","tree":"test-repo"}\n')
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "",
+    "landed": true,
+    "ldap_username": "autolanduser@example.com",
+    "patch_urls": [
+      "http://hgweb/test-repo/raw-rev/85e19ca28526"
+    ],
+    "push_bookmark": "bookmark",
+    "result": "125fb26594d32e024f056ca42da2d01598e662df",
+    "rev": "p5",
+    "tree": "test-repo"
+  }
   $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
   4:Bug 1 - more goodness; r?cthulhu:public:branch=default:moz-landing-system=lando
   3:Bug 1 - even more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
@@ -134,7 +193,20 @@ Post a job with unicode
   $ autolandctl post-job test-repo p6 land-repo --push-bookmark "bookmark" --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":6}\n')
   $ autolandctl job-status 6 --poll
-  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch_urls":["http://hgweb/test-repo/raw-rev/d5b17bac3b15"],"push_bookmark":"bookmark","result":"8ec47f5278c79b0efed3742ecd77df69e57a752a","rev":"p6","tree":"test-repo"}\n')
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "",
+    "landed": true,
+    "ldap_username": "autolanduser@example.com",
+    "patch_urls": [
+      "http://hgweb/test-repo/raw-rev/d5b17bac3b15"
+    ],
+    "push_bookmark": "bookmark",
+    "result": "8ec47f5278c79b0efed3742ecd77df69e57a752a",
+    "rev": "p6",
+    "tree": "test-repo"
+  }
   $ autolandctl exec --container=hg hg log --encoding=utf-8 /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
   5:Bug 1 - \xe3\x81\x93\xe3\x82\x93\xe3\x81\xab\xe3\x81\xa1\xe3\x81\xaf; r?cthulhu:public:branch=default:moz-landing-system=lando (esc)
   4:Bug 1 - more goodness; r?cthulhu:public:branch=default:moz-landing-system=lando
@@ -145,10 +217,27 @@ Post a job with unicode
 
 Bad Merge (using the now obsolete inline-patch created earlier)
 
-  $ autolandctl post-job test-repo p4 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
+  $ autolandctl post-job test-repo p7 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
   (200, u'{"request_id":7}\n')
   $ autolandctl job-status 7 --poll
-  (200, u'{"destination":"land-repo","error_msg":"We\'re sorry, Autoland could not rebase your commits for you automatically. Please manually rebase your commits and try again.*}\n') (glob)
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "We're sorry, Autoland could not rebase your commits for you automatically. Please manually rebase your commits and try again.
+  applying * (glob)
+  foo
+  Hunk #1 FAILED at 1.
+  1 out of 1 hunk FAILED -- saving rejects to file foo.rej
+  abort: patch command failed: exited with status 256
+  ",
+    "landed": false,
+    "ldap_username": "autolanduser@example.com",
+    "patch": "*", (glob)
+    "push_bookmark": "bookmark",
+    "result": "",
+    "rev": "p7",
+    "tree": "test-repo"
+  }
 
 Test falling back to patch
 
@@ -164,10 +253,21 @@ Test falling back to patch
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
 
-  $ autolandctl post-job test-repo p4 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
+  $ autolandctl post-job test-repo p8 land-repo --push-bookmark "bookmark" --patch-file $TESTTMP/patch
   (200, u'{"request_id":8}\n')
   $ autolandctl job-status 8 --poll
-  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch":"*","push_bookmark":"bookmark","result":"a1cce11f4932b53b2a12feb302203c42d53e9016","rev":"p4","tree":"test-repo"}\n') (glob)
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "",
+    "landed": true,
+    "ldap_username": "autolanduser@example.com",
+    "patch": "*", (glob)
+    "push_bookmark": "bookmark",
+    "result": "a1cce11f4932b53b2a12feb302203c42d53e9016",
+    "rev": "p8",
+    "tree": "test-repo"
+  }
   $ autolandctl exec --container=hg hg log /repos/land-repo/ --template '{rev}:{desc|firstline}:{phase}:{join(extras, ":")}\n'
   6:Bug 1 - too much stuff to hold; r?cthulhu:public:branch=default:moz-landing-system=lando
   5:Bug 1 - \xe3\x81\x93\xe3\x82\x93\xe3\x81\xab\xe3\x81\xa1\xe3\x81\xaf; r?cthulhu:public:branch=default:moz-landing-system=lando (esc)
@@ -176,7 +276,6 @@ Test falling back to patch
   2:Bug 1 - some more stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
   1:Bug 1 - some stuff; r?cthulhu:public:branch=default:moz-landing-system=lando
   0:initial commit:public:branch=default
-
 
 Create a commit to test on Try
 
@@ -193,7 +292,7 @@ Create a commit to test on Try
 
 Post a job with try syntax
 
-  $ autolandctl post-job test-repo p8 land-repo --trysyntax "stuff" --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p0 land-repo --trysyntax "stuff" --patch-url http://hgweb/test-repo/raw-rev/$REV
   (400, u'{"error":"Bad request: trysyntax is not supported with patch_urls"}\n')
 
 Getting status for an unknown job should return a 404
@@ -207,7 +306,19 @@ Ensure unexpected files in the repo path are not landed.
   $ autolandctl post-job test-repo p9 land-repo --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":9}\n')
   $ autolandctl job-status 9 --poll
-  (200, u'{"destination":"land-repo","error_msg":"","landed":true,"ldap_username":"autolanduser@example.com","patch_urls":["http://hgweb/test-repo/raw-rev/ca6d3b938cfa"],"result":"9f2de2f2c973baab51cdce274313cda926fb2208","rev":"p9","tree":"test-repo"}\n')
+  200
+  {
+    "destination": "land-repo",
+    "error_msg": "",
+    "landed": true,
+    "ldap_username": "autolanduser@example.com",
+    "patch_urls": [
+      "http://hgweb/test-repo/raw-rev/ca6d3b938cfa"
+    ],
+    "result": "9f2de2f2c973baab51cdce274313cda926fb2208",
+    "rev": "p9",
+    "tree": "test-repo"
+  }
   $ autolandctl exec --container=hg hg -q -R /repos/land-repo update tip
   $ autolandctl exec --container=hg hg files --cwd /repos/land-repo
   foo
@@ -230,9 +341,9 @@ the whitelist. example.org is not.
   (200, u'{"request_id":15}\n')
   $ autolandctl post-job test-repo p16 land-repo --pingback-url http://10.0.0.1:443 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (200, u'{"request_id":16}\n')
-  $ autolandctl post-job test-repo p17 land-repo --pingback-url http://8.8.8.8:443 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p0 land-repo --pingback-url http://8.8.8.8:443 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (400, u'{"error":"Bad request: bad pingback_url"}\n')
-  $ autolandctl post-job test-repo p18 land-repo --pingback-url http://example.org:9898 --patch-url http://hgweb/test-repo/raw-rev/$REV
+  $ autolandctl post-job test-repo p0 land-repo --pingback-url http://example.org:9898 --patch-url http://hgweb/test-repo/raw-rev/$REV
   (400, u'{"error":"Bad request: bad pingback_url"}\n')
 
 Post the same job twice.  Start with stopping the autoland service to
@@ -240,7 +351,7 @@ guarentee the first request is still in the queue when the second is submitted.
 
   $ docker stop autoland_test.daemon
   autoland_test.daemon
-  $ autolandctl post-job test-repo p19 land-repo --trysyntax "stuff"
+  $ autolandctl post-job test-repo p17 land-repo --trysyntax "stuff"
   (200, u'{"request_id":17}\n')
-  $ autolandctl post-job test-repo p19 land-repo --trysyntax "stuff"
-  (400, u'{"error":"Bad Request: a request to land revision p19 to land-repo is already in progress"}\n')
+  $ autolandctl post-job test-repo p17 land-repo --trysyntax "stuff"
+  (400, u'{"error":"Bad Request: a request to land revision p17 to land-repo is already in progress"}\n')
